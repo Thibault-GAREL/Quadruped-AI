@@ -277,9 +277,13 @@ def main():
                 ia.on_episode_end(distance, frame_count, dog_state)
 
                 # Vérifier si on doit reset
+                prev_generation = ia.generation
                 if ia.should_reset_simulation():
-                    # Log de génération
-                    ia.on_generation_end()
+                    # Log de génération seulement quand une génération vient de s'achever
+                    # (should_reset_simulation est appelé à chaque fin d'épisode mais
+                    # ia.generation n'est incrémenté qu'en fin de population complète).
+                    if ia.generation != prev_generation:
+                        ia.on_generation_end()
 
                     if ia.generation >= ia_config.TRAINING_CONFIG['max_generations']:
                         print(f"\n✅ Training terminé: {ia.generation} générations")

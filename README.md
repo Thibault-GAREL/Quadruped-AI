@@ -94,12 +94,72 @@ python -m venv .venv #if you don't have a virtual environnement
 source .venv/bin/activate   # Linux / macOS
 .venv\Scripts\activate      # Windows
 
-pip install box2D pygame
+pip install box2D pygame mlflow pydantic-settings pandas numpy
 
 python main.py
-
-mlflow ui --backend-store-uri sqlite:///outputs/logs/mlflow.db
 ```
+
+---
+
+## 🚀 Train the neuro-GA (tuned hyperparams)
+
+Best effort hyperparams to escape early convergence (PowerShell, Windows):
+```powershell
+$env:NEURO_GA_POPULATION_SIZE       = "80"
+$env:NEURO_GA_MUTATION_RATE         = "0.15"
+$env:NEURO_GA_MUTATION_STRENGTH     = "0.35"
+$env:NEURO_GA_ELITE_SIZE            = "3"
+$env:NEURO_GA_TOURNAMENT_SIZE       = "5"
+$env:NEURO_GA_CROSSOVER_RATE        = "0.75"
+$env:NEURO_GA_REWARD_THRESHOLD_FOR_MAX_TIME = "3000"
+$env:NEURO_GA_MAX_GENERATIONS       = "100000"
+$env:NEURO_GA_AUTO_CONTINUE         = "False"
+
+python main.py
+```
+
+Force a fresh from-scratch training (skip the loaded checkpoint):
+```powershell
+Move-Item outputs/models/fox_ai_neuro.pkl outputs/models/fox_ai_neuro.pkl.bak -Force
+```
+
+Kill a running training without killing your MLflow UI:
+```powershell
+Get-Process | Where-Object { $_.CommandLine -like "*main.py*" } | Stop-Process
+```
+
+Check progress of the latest run (works while training is live):
+```powershell
+python progress.py
+```
+Outputs : run name, status, duration, generations done, best fitness, gens/min.
+
+---
+
+## 📊 Visualize results with MLflow
+
+Launch the UI (from the project root, with a venv that has mlflow):
+```powershell
+mlflow ui --backend-store-uri sqlite:///mlflow.db
+```
+Open http://localhost:5000 in your browser.
+
+**Find the best runs** :
+1. Open experiment `quadruped-neuro-ga`
+2. Click the `Metrics` column header to add `best_distance_ever` (or `fitness_best`)
+3. Sort by `best_distance_ever` descending → top row is your best run
+4. Click any run → tab **Model metrics** → see fitness curve over generations
+
+**Compare runs side by side** :
+1. Check 2+ runs in the table
+2. Click **Compare**
+3. Tab **Parallel Coordinates** → see hyperparams vs final fitness
+
+**Best saved model file** is at:
+```
+outputs/models/<name>_run-XX_date-YYYY-MM-DD/best_model.pkl
+```
+
 ---
 
 ## 📖 Inspiration / Sources
