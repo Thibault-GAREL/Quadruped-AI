@@ -17,10 +17,15 @@ if config_ia.IA_TYPE == "choreography":
 elif config_ia.IA_TYPE == "neuro_ga":
     from src.models.ia_gen import IAGenetic as IAClass
     import src.models.config_gen as ia_config
+elif config_ia.IA_TYPE == "ppo":
+    # PPO : main.py sert uniquement a VISUALISER une politique entrainee.
+    # L'entrainement se fait via : python train.py --algo ppo (headless).
+    from src.models.ia_ppo import IAPPOPlayer as IAClass
+    import src.models.config_ppo as ia_config
 else:
     raise ValueError(
         f"IA_TYPE inconnu : {config_ia.IA_TYPE!r}. "
-        "Valeurs supportees : 'choreography', 'neuro_ga'."
+        "Valeurs supportees : 'choreography', 'neuro_ga', 'ppo'."
     )
 
 
@@ -136,13 +141,14 @@ def main():
         print("👤 Mode CONTRÔLE HUMAIN")
 
     # Paramètres de simulation
+    # IMPORTANT : le pas de physique est TOUJOURS 1/60 s. L'ancien mode rapide
+    # multipliait TIME_STEP par 50, ce qui faussait complètement la dynamique
+    # Box2D (un dt géant ne simule pas la même physique). Désormais le mode
+    # rapide (F2) coupe simplement le rendu et la limite de FPS : la boucle
+    # tourne à la vitesse du CPU avec une physique fidèle.
+    # Pour les gros entraînements, utiliser train.py (headless + parallèle).
     TARGET_FPS = 60
-    BASE_TIME_STEP = 1.0 / TARGET_FPS
-
-    if display_active:
-        TIME_STEP = BASE_TIME_STEP
-    else:
-        TIME_STEP = BASE_TIME_STEP * config_ia.CONFIG['speed_multiplier']
+    TIME_STEP = 1.0 / TARGET_FPS
 
     # Boucle principale
     running = True
@@ -165,34 +171,19 @@ def main():
                 elif event.key == pygame.K_F1:
                     follow = display.toggle_follow_mode()
                     print(f"📷 Mode caméra: {'SUIVI AUTO' if follow else 'MANUEL'}")
-                # Basculer l'affichage avec F2
+                # Basculer l'affichage avec F2 (la physique reste a dt = 1/60 :
+                # le mode rapide coupe juste le rendu et la limite de FPS)
                 elif event.key == pygame.K_F2:
                     display_active = not display_active
-
-                    # ✅ AJOUT : Recalculer TIME_STEP
                     if display_active:
-                        TIME_STEP = BASE_TIME_STEP
                         print("🖥️ AFFICHAGE ACTIVÉ")
                     else:
-                        TIME_STEP = BASE_TIME_STEP * config_ia.CONFIG['speed_multiplier']
-                        print(f"⚡ AFFICHAGE DÉSACTIVÉ (mode rapide x{config_ia.CONFIG['speed_multiplier']})")
+                        print("⚡ AFFICHAGE DÉSACTIVÉ (boucle à vitesse CPU, physique fidèle)")
+                        print("   💡 Pour un vrai gros entraînement : python train.py (parallèle)")
                 # Sauvegarder manuellement avec S
                 elif event.key == pygame.K_s and not HUMAN_CONTROL:
                     ia.save(ia_config.TRAINING_CONFIG['save_file'])
                     print(f"💾 Sauvegarde manuelle effectuée")
-                elif event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS or event.key == pygame.K_EQUALS:
-                    # Augmenter la vitesse
-                    config_ia.CONFIG['speed_multiplier'] = min(config_ia.CONFIG['speed_multiplier'] + 5, 100.0)
-                    if not display_active:
-                        TIME_STEP = BASE_TIME_STEP * config_ia.CONFIG['speed_multiplier']
-                    print(f"⚡ Vitesse: x{config_ia.CONFIG['speed_multiplier']}")
-
-                elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
-                    # Diminuer la vitesse
-                    config_ia.CONFIG['speed_multiplier'] = max(config_ia.CONFIG['speed_multiplier'] - 5, 1.0)
-                    if not display_active:
-                        TIME_STEP = BASE_TIME_STEP * config_ia.CONFIG['speed_multiplier']
-                    print(f"🐌 Vitesse: x{config_ia.CONFIG['speed_multiplier']}")
 
         # Gestion des touches (contrôle manuel)
         keys = pygame.key.get_pressed()
@@ -362,7 +353,10 @@ def main():
             if not HUMAN_CONTROL:
                 font = pygame.font.Font(None, 24)
                 stats = ia.get_stats()
-                text = f"Gen {stats['generation']} | Individu {stats['current_individual'] + 1}/{ia_config.GA_CONFIG['population_size']} | Best {stats['best_distance']:.2f}m"
+                if hasattr(ia, 'hud_text'):
+                    text = ia.hud_text()
+                else:
+                    text = f"Gen {stats['generation']} | Individu {stats['current_individual'] + 1}/{ia_config.GA_CONFIG['population_size']} | Best {stats['best_distance']:.2f}m"
 
                 surface = font.render(text, True, (255, 255, 255))
                 bg_surf = pygame.Surface((surface.get_width() + 10, surface.get_height() + 5))
@@ -375,10 +369,8 @@ def main():
 
         if display_active:
             display.tick(TARGET_FPS)
-        else:
-            # ✅ En mode rapide, on ne limite pas le FPS
-            # Le TIME_STEP fait déjà tout le travail
-            display.tick(10000)  # Limite très haute = pas de limite
+        # En mode rapide : aucune limite de FPS, la boucle tourne à fond
+        # (physique inchangée, on simule juste plus de frames par seconde réelle).
 
     # Sauvegarde finale
     if not HUMAN_CONTROL:

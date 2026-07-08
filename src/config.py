@@ -21,13 +21,18 @@ CONFIG = {
 }
 
 # ========== SÉLECTION DE L'IA ==========
-IA_TYPE = "neuro_ga"  # "choreography" ou "neuro_ga" Change ici pour choisir l'IA !
+IA_TYPE = "neuro_ga"  # "choreography", "neuro_ga" ou "ppo" Change ici pour choisir l'IA !
 
 """
 Tu peux maintenant changer facilement d'IA en modifiant juste cette variable :
 - `"choreography"` → Algorithme génétique sur sequence d'actions (boucle ouverte)
 - `"neuro_ga"`     → Neuroevolution : algo génétique sur les poids d'un MLP (boucle fermee, reactive)
-- `"ppo"` → PPO (quand tu l'implémenteras)
+- `"ppo"`          → PPO (PyTorch). Entrainement : python train.py --algo ppo
+                     main.py sert alors a visualiser la politique entrainee.
 - `"dqn"` → DQN (quand tu l'implémenteras)
 - `"neat"` → NEAT (quand tu l'implémenteras)
+
+Entrainement RAPIDE (headless, parallele, recommande / Runpod) :
+    python train.py --algo ga     (neuroevolution, tous les coeurs CPU)
+    python train.py --algo ppo    (PPO vectorise, PyTorch)
 """

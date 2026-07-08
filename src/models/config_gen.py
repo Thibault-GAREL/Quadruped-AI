@@ -72,6 +72,13 @@ class NeuroGASettings(BaseSettings):
     AUTO_CONTINUE: bool = True
     SPEED_MULTIPLIER: int = 50 if not DISPLAY_ENABLED else 1
 
+    # ----- Entrainement headless parallele (train.py) -----
+    N_WORKERS: int = Field(0, ge=0)  # 0 = tous les coeurs CPU
+    # Terminaison anticipee : episode stoppe si pas de progres d'au moins
+    # STAGNATION_MIN_PROGRESS metres depuis STAGNATION_FRAMES frames (0 = off).
+    STAGNATION_FRAMES: int = Field(120, ge=0)
+    STAGNATION_MIN_PROGRESS: float = Field(0.05, ge=0.0)
+
     # ----- MLflow -----
     # SQLite recommande par le skill ai-training (le file store est deprecated).
     MLFLOW_TRACKING_URI: str = "sqlite:///mlflow.db"
