@@ -5,6 +5,7 @@ from src.core_engine.physics import PhysicsWorld, Quadruped
 from src.core_engine.display import Display
 from src.core_engine.overlay import VisualOverlay
 from src.core_engine.parallax import ParallaxManager
+from src.animals import get_animal
 
 # ===== IMPORTS POUR L'IA =====
 import src.config as config_ia
@@ -27,16 +28,20 @@ def main():
     HUMAN_CONTROL = config_ia.HUMAN_CONTROL  # Pour garder la compatibilité
     DISPLAY_ENABLED = config_ia.DISPLAY_ENABLED  # Pour garder la compatibilité
 
+    # ===== ANIMAL SÉLECTIONNÉ (src/config.py -> ANIMAL) =====
+    animal = get_animal(config_ia.ANIMAL)
+    print(f"🐾 Animal : {animal.name} ({animal.num_actuated} muscles actionnés)")
+
     # Initialiser les systèmes
     physics_world = PhysicsWorld(gravity=(0, -10))
 
     # ===== GESTION DE L'AFFICHAGE =====
-    display = Display(width=1200, height=700, title="Quadrupède muscles - Chat texture")
+    display = Display(width=1200, height=700, title=f"Simulation muscles - {animal.name}")
 
-    quadruped = Quadruped(physics_world, x=6, y=3)
+    quadruped = Quadruped(physics_world, x=6, y=animal.spawn_y, definition=animal)
 
-    # Initialiser le système d'overlay visuel avec l'image du chat
-    overlay = VisualOverlay(display, parts_folder="assets", global_scale=0.3)
+    # Initialiser le système d'overlay visuel (peau procédurale + modes debug)
+    overlay = VisualOverlay(display, parts_folder="assets", global_scale=0.3, definition=animal)
 
     # Initialiser le système de parallaxe
     parallax = ParallaxManager()
@@ -204,8 +209,8 @@ def main():
                 display.move_camera(0, -display.camera_speed)
 
         # ===== CONTRÔLE DES MUSCLES =====
-        # Relâcher tous les muscles
-        for i in range(8):
+        # Relâcher tous les muscles actionnés
+        for i in range(quadruped.num_actuated):
             quadruped.control_muscles(i, 'relax')
 
         if HUMAN_CONTROL:
@@ -312,7 +317,7 @@ def main():
                     del physics_world
                     del quadruped
                     physics_world = PhysicsWorld(gravity=(0, -10))
-                    quadruped = Quadruped(physics_world, x=6, y=3)
+                    quadruped = Quadruped(physics_world, x=6, y=animal.spawn_y, definition=animal)
 
                     episode_time = 0.0
                     episode_start_x = quadruped.body.body.position.x

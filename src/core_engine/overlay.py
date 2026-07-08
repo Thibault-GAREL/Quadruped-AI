@@ -6,6 +6,8 @@ import pygame
 import math
 import os
 
+from src.core_engine.procedural_skin import ProceduralSkin
+
 
 class BoneTexture:
     """Charge et dessine une texture pour un os spécifique"""
@@ -207,46 +209,58 @@ class TexturedOverlay:
         loaded_count = sum(1 for tex in self.textures.values() if tex.loaded)
         print(f"✅ {loaded_count}/{len(self.textures)} textures chargées\n")
 
-    def draw_quadruped(self, display, quadruped):
-        """Dessine le quadrupède avec les textures dans le bon ordre"""
+    def draw_quadruped(self, display, quadruped, extra_bones=None):
+        """Dessine le quadrupède avec les textures dans le bon ordre
 
-        bone_mapping = {
-            'body': quadruped.body,
-            'neck': quadruped.neck,
-            'head': quadruped.head,
-            'front_thigh': quadruped.front_thigh,
-            'front_shin': quadruped.front_shin,
-            'front_ankle': quadruped.front_ankle,
-            'front_foot': quadruped.front_foot,
-            'back_thigh': quadruped.back_thigh,
-            'back_shin': quadruped.back_shin,
-            'back_ankle': quadruped.back_ankle,
-            'back_foot': quadruped.back_foot,
-            'tail_bottom': quadruped.tail_bottom,
-            'tail_mid': quadruped.tail_mid,
-            'tail_high': quadruped.tail_high,
-        }
+        Args:
+            extra_bones: dict nom -> os virtuel pour les parties qui n'existent
+                plus dans la physique (ex: la queue, devenue procédurale).
+        """
+        extra_bones = extra_bones or {}
 
         for part_name in self.draw_order:
-            if part_name in self.textures and part_name in bone_mapping:
-                texture = self.textures[part_name]
-                bone = bone_mapping[part_name]
-                offset = self.part_offsets.get(part_name, (0, 0))
-                rotation_offset = self.rotation_offsets.get(part_name, 0)
-                texture.draw(display.screen, bone, display, offset=offset, rotation_offset=rotation_offset)
+            if part_name not in self.textures:
+                continue
+            # Os physique si présent, sinon os virtuel (queue procédurale).
+            bone = getattr(quadruped, part_name, None) or extra_bones.get(part_name)
+            if bone is None:
+                continue
+            texture = self.textures[part_name]
+            offset = self.part_offsets.get(part_name, (0, 0))
+            rotation_offset = self.rotation_offsets.get(part_name, 0)
+            texture.draw(display.screen, bone, display, offset=offset, rotation_offset=rotation_offset)
 
 
 class VisualOverlay:
-    """Gestionnaire d'overlay visuel - VERSION PARTIES DÉCOUPÉES"""
+    """Gestionnaire d'overlay visuel.
 
-    def __init__(self, display, parts_folder="fox_parts", global_scale=0.3):
+    Modes (touche TAB) :
+        PROCEDURAL : peau vectorielle low poly dessinée depuis les os
+        TEXTURED   : ancien système de PNG collés (legacy, renard uniquement)
+        SKELETON   : os + muscles (debug)
+        OVERLAY    : peau procédurale + squelette semi-transparent
+
+    Le mode TEXTURED n'apparaît que si l'animal a des textures découpées
+    (has_legacy_textures dans son AnimalDefinition).
+    """
+
+    def __init__(self, display, parts_folder="fox_parts", global_scale=0.3, definition=None):
         self.display = display
-        self.render_mode = 0  # 0=TEXTURED, 1=SKELETON, 2=OVERLAY (texture + skeleton)
+        self.render_mode = 0
 
-        # self.render_mode = 0  # 0=TEXTURED, 1=SKELETON, 2=OVERLAY, 3=SOFTBODY
-        # self.soft_body_quadruped = soft_body_quadruped  # Référence au système soft body
+        # Animal par défaut : le renard.
+        if definition is None:
+            from src.animals.fox import FOX
+            definition = FOX
+        self.definition = definition
+        self.procedural_skin = ProceduralSkin(definition.skin)
 
-        self.textured_overlay = TexturedOverlay(parts_folder, global_scale=global_scale)
+        if definition.has_legacy_textures:
+            self.textured_overlay = TexturedOverlay(parts_folder, global_scale=global_scale)
+            self.mode_names = ["PROCEDURAL", "TEXTURED", "SKELETON", "OVERLAY"]
+        else:
+            self.textured_overlay = None
+            self.mode_names = ["PROCEDURAL", "SKELETON", "OVERLAY"]
 
         self.colors = {
             'bone': (255, 255, 255),
@@ -258,15 +272,9 @@ class VisualOverlay:
         self.glow_surface = pygame.Surface((display.width, display.height), pygame.SRCALPHA)
 
     def toggle_mode(self):
-        """Bascule entre TEXTURED, SKELETON et OVERLAY"""
-        self.render_mode = (self.render_mode + 1) % 3
-        mode_names = ["TEXTURED", "SKELETON", "OVERLAY"]
-        print(f"🔄 Mode : {mode_names[self.render_mode]}")
-
-        # """Bascule entre TEXTURED, SKELETON, OVERLAY et SOFTBODY"""
-        # self.render_mode = (self.render_mode + 1) % 4
-        # mode_names = ["TEXTURED", "SKELETON", "OVERLAY", "SOFTBODY"]
-        # print(f"🔄 Mode : {mode_names[self.render_mode]}")
+        """Bascule entre les modes d'affichage"""
+        self.render_mode = (self.render_mode + 1) % len(self.mode_names)
+        print(f"🔄 Mode : {self.mode_names[self.render_mode]}")
 
     def get_bone_vertices(self, bone):
         """Récupère les sommets d'un os à l'écran"""
@@ -319,12 +327,24 @@ class VisualOverlay:
         """Dessine le quadrupède selon le mode"""
         self.glow_surface.fill((0, 0, 0, 0))
 
-        if self.render_mode == 0:
-            # MODE TEXTURED : Seulement la texture
-            self.textured_overlay.draw_quadruped(self.display, quadruped)
+        # La queue procédurale et les oreilles sont mises à jour quel que soit
+        # le mode : la queue sert aussi d'os virtuels au mode TEXTURED.
+        self.procedural_skin.update(quadruped)
 
-        elif self.render_mode == 1:
-            # MODE SKELETON : Seulement le squelette
+        mode = self.mode_names[self.render_mode]
+
+        if mode == "PROCEDURAL":
+            # MODE PROCEDURAL : peau vectorielle low poly
+            self.procedural_skin.draw(self.display, quadruped)
+
+        elif mode == "TEXTURED":
+            # MODE TEXTURED (legacy) : PNG collés sur les os
+            self.textured_overlay.draw_quadruped(
+                self.display, quadruped,
+                extra_bones=self.procedural_skin.get_tail_virtual_bones())
+
+        elif mode == "SKELETON":
+            # MODE SKELETON : seulement le squelette
             for bone in quadruped.bones:
                 self.draw_skeleton_bone(bone)
 
@@ -341,10 +361,10 @@ class VisualOverlay:
             for muscle in quadruped.muscles:
                 self.draw_muscle(muscle)
 
-        elif self.render_mode == 2:
-            # MODE OVERLAY : Texture + squelette par-dessus pour calibrage
-            # 1. Dessiner la texture d'abord
-            self.textured_overlay.draw_quadruped(self.display, quadruped)
+        elif mode == "OVERLAY":
+            # MODE OVERLAY : peau procédurale + squelette par-dessus pour calibrage
+            # 1. Dessiner la peau procédurale d'abord
+            self.procedural_skin.draw(self.display, quadruped)
 
             # 2. Dessiner le squelette semi-transparent par-dessus
             # Créer une surface temporaire avec transparence
@@ -378,33 +398,27 @@ class VisualOverlay:
             # Appliquer la surface overlay sur l'écran
             self.display.screen.blit(overlay_surface, (0, 0))
 
-        # elif self.render_mode == 3:
-        #     # MODE SOFTBODY : Afficher le soft body
-        #     if self.soft_body_quadruped:
-        #         self.soft_body_quadruped.draw(self.display)
-        #     else:
-        #         # Message d'erreur si soft body non initialisé
-        #         font = pygame.font.Font(None, 36)
-        #         text = font.render("SOFT BODY NON INITIALISÉ", True, (255, 50, 50))
-        #         self.display.screen.blit(text, (self.display.width // 2 - 200, self.display.height // 2))
-
     def draw_status(self):
         """Affiche le mode actuel"""
-        mode_names = ["TEXTURED", "SKELETON", "OVERLAY"]
-        mode_colors = [(255, 150, 50), (255, 255, 100), (150, 255, 150)]
+        mode_colors = {
+            "PROCEDURAL": (120, 255, 170),
+            "TEXTURED": (255, 150, 50),
+            "SKELETON": (255, 255, 100),
+            "OVERLAY": (150, 255, 150),
+        }
 
-        current_mode = mode_names[self.render_mode]
-        current_color = mode_colors[self.render_mode]
+        current_mode = self.mode_names[self.render_mode]
 
-        self.display.draw_text(f"Mode: {current_mode}",
-                               (10, self.display.height - 30), current_color)
-        self.display.draw_text("TAB: Changer mode (Textured/Skeleton/Overlay)",
+        self.display.draw_text(f"Mode: {current_mode} ({self.definition.name})",
+                               (10, self.display.height - 30), mode_colors[current_mode])
+        self.display.draw_text(f"TAB: Changer mode ({'/'.join(m.capitalize() for m in self.mode_names)})",
                                (10, self.display.height - 55), (200, 200, 200))
 
-        loaded = sum(1 for tex in self.textured_overlay.textures.values() if tex.loaded)
-        total = len(self.textured_overlay.textures)
-        self.display.draw_text(f"Textures: {loaded}/{total}",
-                               (10, self.display.height - 80), (150, 200, 255))
+        if self.textured_overlay is not None:
+            loaded = sum(1 for tex in self.textured_overlay.textures.values() if tex.loaded)
+            total = len(self.textured_overlay.textures)
+            self.display.draw_text(f"Textures: {loaded}/{total}",
+                                   (10, self.display.height - 80), (150, 200, 255))
 
     # def draw_status(self):
     #     """Affiche le mode actuel"""

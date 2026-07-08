@@ -14,7 +14,15 @@ Les valeurs peuvent etre surchargees via variables d'environnement
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
-from src.config import DISPLAY_ENABLED
+from src.config import DISPLAY_ENABLED, ANIMAL
+from src.animals import get_animal
+
+# L'animal selectionne determine la taille de sortie du reseau (nombre de
+# muscles actionnes) et les chemins de sauvegarde (un checkpoint par animal).
+_ANIMAL_DEF = get_animal(ANIMAL)
+# Suffixe vide pour le renard : conserve les noms de runs et checkpoints
+# historiques (neuro-ga_run-NN, fox_ai_neuro.pkl).
+_SUFFIX = "" if ANIMAL == "fox" else f"-{ANIMAL}"
 
 
 class NeuroGASettings(BaseSettings):
@@ -36,7 +44,7 @@ class NeuroGASettings(BaseSettings):
     # INPUT_SIZE + 2 * OUTPUT_SIZE. Ne pas coder cette taille en dur ailleurs.
     INPUT_SIZE: int = 7
     HIDDEN_SIZE: int = 16
-    OUTPUT_SIZE: int = 8
+    OUTPUT_SIZE: int = _ANIMAL_DEF.num_actuated  # 8 pour le renard ET la poule
     USE_PROPRIOCEPTION: bool = True  # Injecte les angles/vitesses des joints
     MAX_MUSCLE_SPEED: float = Field(3.0, gt=0.0)  # Pour normaliser les vitesses
     ACTION_THRESHOLD: float = Field(0.33, ge=0.0, le=1.0)  # conserve (compat), inutilise en continu
@@ -67,14 +75,14 @@ class NeuroGASettings(BaseSettings):
     # ----- MLflow -----
     # SQLite recommande par le skill ai-training (le file store est deprecated).
     MLFLOW_TRACKING_URI: str = "sqlite:///mlflow.db"
-    MLFLOW_EXPERIMENT_NAME: str = "quadruped-neuro-ga"
-    MODEL_NAME: str = "neuro-ga"
+    MLFLOW_EXPERIMENT_NAME: str = f"quadruped-neuro-ga{_SUFFIX}"
+    MODEL_NAME: str = f"neuro-ga{_SUFFIX}"
 
     # ----- Chemins (conformes au skill thibault-ia-init) -----
     MODELS_DIR: str = "outputs/models"
     RESULTS_DIR: str = "outputs/results"
-    LEGACY_SAVE_FILE: str = "outputs/models/fox_ai_neuro.pkl"  # checkpoint compat retro
-    LEGACY_CSV_FILE: str = "outputs/results/training_data_neuro.csv"
+    LEGACY_SAVE_FILE: str = f"outputs/models/{ANIMAL}_ai_neuro.pkl"  # checkpoint compat retro
+    LEGACY_CSV_FILE: str = f"outputs/results/training_data_neuro{_SUFFIX}.csv"
 
 
 # Singleton charge une seule fois a l'import (lit aussi les variables d'env).

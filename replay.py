@@ -30,6 +30,8 @@ from src.core_engine.display import Display
 from src.core_engine.overlay import VisualOverlay
 from src.core_engine.parallax import ParallaxManager
 from src.models.ia_gen import NeuroPolicy
+from src.animals import get_animal
+from src.config import ANIMAL
 
 RESULTS_DIR = Path("outputs/results")
 TARGET_FPS = 60
@@ -99,14 +101,18 @@ def main():
     best_index = max(range(len(champions)), key=lambda i: champions[i]["fitness"])
     current = best_index
 
-    display = Display(width=1200, height=700, title="Quadrupède — Rejeu des champions")
-    overlay = VisualOverlay(display, parts_folder="assets", global_scale=0.3)
+    # L'animal doit etre le meme que celui de l'entrainement rejoue
+    # (ANIMAL dans src/config.py).
+    animal = get_animal(ANIMAL)
+
+    display = Display(width=1200, height=700, title=f"Rejeu des champions - {animal.name}")
+    overlay = VisualOverlay(display, parts_folder="assets", global_scale=0.3, definition=animal)
     parallax = build_scene()
     display.follow_mode = True
 
     def reset_world():
         world = PhysicsWorld(gravity=(0, -10))
-        quad = Quadruped(world, x=6, y=3)
+        quad = Quadruped(world, x=6, y=animal.spawn_y, definition=animal)
         return world, quad, quad.body.body.position.x
 
     physics_world, quadruped, start_x = reset_world()
