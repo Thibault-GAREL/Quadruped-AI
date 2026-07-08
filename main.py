@@ -1,3 +1,5 @@
+import pickle
+
 import pygame
 from src.core_engine.physics import PhysicsWorld, Quadruped
 from src.core_engine.display import Display
@@ -122,6 +124,9 @@ def main():
             print(f"   IA chargée: Génération {ia.generation}")
         except FileNotFoundError:
             print("   Nouvelle IA créée")
+        except (ValueError, KeyError, AssertionError, pickle.UnpicklingError) as e:
+            # Checkpoint present mais incompatible (ex: architecture modifiee).
+            print(f"   Checkpoint incompatible ({e}). Nouvelle IA créée")
     else:
         print("👤 Mode CONTRÔLE HUMAIN")
 
@@ -249,7 +254,11 @@ def main():
             dog_state = {
                 'position': (quadruped.body.body.position.x, quadruped.body.body.position.y),
                 'velocity': (quadruped.body.body.linearVelocity.x, quadruped.body.body.linearVelocity.y),
-                'angle': quadruped.body.body.angle
+                'angle': quadruped.body.body.angle,
+                # Proprioception : angles et vitesses de tous les joints.
+                # L'IA neuroevolution en consomme les premiers (muscles actionnes).
+                'muscle_angles': [m.get_angle() for m in quadruped.muscles],
+                'muscle_speeds': [m.get_speed() for m in quadruped.muscles],
             }
 
             # Interface unifiee : chaque IA decide comment appliquer son action.
@@ -274,6 +283,8 @@ def main():
 
             if is_fallen or frame_count >= max_time_frames:
                 distance = current_x - episode_start_x
+                # Transmet l'etat de chute a l'IA (fitness penalisee si tombe).
+                dog_state['is_fallen'] = is_fallen
                 ia.on_episode_end(distance, frame_count, dog_state)
 
                 # Vérifier si on doit reset

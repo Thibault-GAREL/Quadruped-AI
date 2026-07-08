@@ -237,6 +237,27 @@ class Quadruped:
             elif action == 'relax':
                 self.muscles[muscle_index].relax()
 
+    def set_muscle_activation(self, muscle_index, activation):
+        """Contrôle CONTINU d'un muscle (pour l'IA neuroevolution).
+
+        activation dans [-1, 1] :
+            > 0  -> extension, l'amplitude module la vitesse du moteur
+            < 0  -> contraction, idem
+            ~ 0  -> relâché
+
+        Contrairement à control_muscles (ternaire tout-ou-rien), l'intensité
+        est proportionnelle, ce qui autorise des démarches beaucoup plus fluides.
+        """
+        if 0 <= muscle_index < len(self.muscles):
+            muscle = self.muscles[muscle_index]
+            activation = max(-1.0, min(1.0, float(activation)))
+            if activation > 0:
+                muscle.extend(activation)
+            elif activation < 0:
+                muscle.contract(-activation)
+            else:
+                muscle.relax()
+
     def update(self):
         """Met à jour tous les muscles"""
         for muscle in self.muscles:

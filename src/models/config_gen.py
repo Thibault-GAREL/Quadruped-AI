@@ -30,10 +30,16 @@ class NeuroGASettings(BaseSettings):
     SEED: int = 42
 
     # ----- Architecture du reseau de neurones -----
+    # INPUT_SIZE = nombre d'entrees "de base" (phase, vitesse, angle, hauteur).
+    # Si USE_PROPRIOCEPTION est actif, on ajoute automatiquement 2 entrees par
+    # muscle actionne (angle + vitesse du joint), soit la taille effective
+    # INPUT_SIZE + 2 * OUTPUT_SIZE. Ne pas coder cette taille en dur ailleurs.
     INPUT_SIZE: int = 7
     HIDDEN_SIZE: int = 16
     OUTPUT_SIZE: int = 8
-    ACTION_THRESHOLD: float = Field(0.33, ge=0.0, le=1.0)
+    USE_PROPRIOCEPTION: bool = True  # Injecte les angles/vitesses des joints
+    MAX_MUSCLE_SPEED: float = Field(3.0, gt=0.0)  # Pour normaliser les vitesses
+    ACTION_THRESHOLD: float = Field(0.33, ge=0.0, le=1.0)  # conserve (compat), inutilise en continu
     TIME_PERIOD: float = Field(1.5, gt=0.0)
 
     # ----- Algorithme genetique -----
@@ -44,6 +50,7 @@ class NeuroGASettings(BaseSettings):
     ELITE_SIZE: int = Field(4, ge=1)
     TOURNAMENT_SIZE: int = Field(3, ge=2)
     INIT_STD: float = Field(0.5, gt=0.0)
+    FALL_PENALTY: float = Field(100.0, ge=0.0)  # Retranche du fitness si le quadrupede tombe
 
     # ----- Temps adaptatif -----
     ADAPTIVE_TIME: bool = True
@@ -81,6 +88,8 @@ NN_CONFIG = {
     'input_size': SETTINGS.INPUT_SIZE,
     'hidden_size': SETTINGS.HIDDEN_SIZE,
     'output_size': SETTINGS.OUTPUT_SIZE,
+    'use_proprioception': SETTINGS.USE_PROPRIOCEPTION,
+    'max_muscle_speed': SETTINGS.MAX_MUSCLE_SPEED,
     'action_threshold': SETTINGS.ACTION_THRESHOLD,
     'time_period': SETTINGS.TIME_PERIOD,
 }
@@ -93,6 +102,7 @@ GA_CONFIG = {
     'elite_size': SETTINGS.ELITE_SIZE,
     'tournament_size': SETTINGS.TOURNAMENT_SIZE,
     'init_std': SETTINGS.INIT_STD,
+    'fall_penalty': SETTINGS.FALL_PENALTY,
     'adaptive_time': SETTINGS.ADAPTIVE_TIME,
     'base_time': SETTINGS.BASE_TIME,
     'max_time': SETTINGS.MAX_TIME,

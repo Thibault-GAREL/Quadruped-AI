@@ -4,18 +4,21 @@ sont evolues par un algorithme genetique.
 
 Contrairement a IAChoreography (boucle ouverte, sequence figee d'actions),
 cette IA est REACTIVE : elle prend l'etat du quadrupede en entree
-et choisit ses actions musculaires en consequence.
+(y compris la proprioception : angle et vitesse de chaque muscle actionne)
+et choisit ses activations musculaires en continu.
 
-Architecture du reseau:
-    [entree (7)] -> [cache (16) tanh] -> [sortie (8) tanh]
+Architecture du reseau (proprioception activee, 8 muscles) :
+    [entree (7 + 2*8 = 23)] -> [cache (16) tanh] -> [sortie (8) tanh]
 
 Le genome est le vecteur applati de tous les poids et biais.
 
 Bonnes pratiques implementees (skill ai-training):
 - Random seeds (random + numpy) pour reproductibilite
-- Pydantic config (cf. AI/config_gen.py) pour valider les hyperparametres
+- Pydantic config (cf. config_gen.py) pour valider les hyperparametres
 - MLflow tracking : params + metriques par generation + artefact final
 - Convention de nommage : models/{name}_run-{NN}_date-{YYYY-MM-DD}/
+- Archive des champions : le meilleur genome de CHAQUE generation est
+  sauvegarde (results/{run}/champions.pkl) pour rejeu deterministe via replay.py
 """
 
 import json
@@ -89,6 +92,71 @@ class MLP:
         return out
 
 
+class NeuroPolicy:
+    """Politique reactive : construction des entrees + MLP + application continue.
+
+    Cette classe est PARTAGEE entre l'entrainement (IAGenetic) et le rejeu
+    (replay.py). Ainsi, le mouvement rejoue est rigoureusement identique a
+    celui evalue pendant l'entrainement (memes entrees, meme reseau).
+
+    `nn_config` doit contenir :
+        input_size (base), hidden_size, output_size, time_period,
+        use_proprioception (bool), max_muscle_speed (float).
+    """
+
+    def __init__(self, nn_config: Dict[str, Any]):
+        self.base_input = int(nn_config['input_size'])
+        self.hidden_size = int(nn_config['hidden_size'])
+        self.output_size = int(nn_config['output_size'])
+        self.time_period = float(nn_config['time_period'])
+        self.use_proprioception = bool(nn_config.get('use_proprioception', True))
+        self.max_muscle_speed = float(nn_config.get('max_muscle_speed', 3.0))
+
+        # Proprioception : angle + vitesse de chaque muscle actionne.
+        proprio_dim = 2 * self.output_size if self.use_proprioception else 0
+        self.input_size = self.base_input + proprio_dim
+
+        self.mlp = MLP(self.input_size, self.hidden_size, self.output_size)
+        self.num_params = self.mlp.num_params
+
+    def build_input(self, time: float, dog_state: Dict[str, Any]) -> np.ndarray:
+        """Construit le vecteur d'entree normalise a partir de l'etat."""
+        _, y = dog_state['position']
+        vx, vy = dog_state['velocity']
+        angle = dog_state['angle']
+
+        phase = 2.0 * np.pi * time / self.time_period
+        feats: List[float] = [
+            np.sin(phase),
+            np.cos(phase),
+            np.clip(vx / 5.0, -1.0, 1.0),
+            np.clip(vy / 5.0, -1.0, 1.0),
+            np.sin(angle),
+            np.cos(angle),
+            np.clip((y - 3.0) / 2.0, -1.0, 1.0),
+        ]
+
+        if self.use_proprioception:
+            m_ang = dog_state.get('muscle_angles', [])
+            m_spd = dog_state.get('muscle_speeds', [])
+            for i in range(self.output_size):
+                a = m_ang[i] if i < len(m_ang) else 0.0
+                s = m_spd[i] if i < len(m_spd) else 0.0
+                feats.append(float(np.clip(a / np.pi, -1.0, 1.0)))
+                feats.append(float(np.clip(s / self.max_muscle_speed, -1.0, 1.0)))
+
+        return np.array(feats, dtype=np.float32)
+
+    def act(self, time: float, dog_state: Dict[str, Any], genome: np.ndarray) -> np.ndarray:
+        """Retourne les 8 activations continues dans [-1, 1]."""
+        return self.mlp.forward(self.build_input(time, dog_state), genome)
+
+    def apply(self, quadruped, action: np.ndarray) -> None:
+        """Applique les activations continues aux muscles actionnes."""
+        for i in range(self.output_size):
+            quadruped.set_muscle_activation(i, float(action[i]))
+
+
 class IAGenetic(IABase):
     """IA neuroevolution : evolue les poids d'un MLP par algorithme genetique."""
 
@@ -103,15 +171,15 @@ class IAGenetic(IABase):
         self.seed = getattr(config, "SEED", 42)
         _seed_everything(self.seed)
 
-        # ---- Architecture ----
-        self.input_size = nn_cfg['input_size']
-        self.hidden_size = nn_cfg['hidden_size']
-        self.output_size = nn_cfg['output_size']
-        self.threshold = nn_cfg['action_threshold']
-        self.time_period = nn_cfg['time_period']
+        # ---- Politique (entrees + reseau + application) ----
+        self.policy = NeuroPolicy(nn_cfg)
+        self.input_size = self.policy.input_size          # taille effective (avec proprio)
+        self.hidden_size = self.policy.hidden_size
+        self.output_size = self.policy.output_size
+        self.time_period = self.policy.time_period
+        self.genome_length = self.policy.num_params
 
-        self.nn = MLP(self.input_size, self.hidden_size, self.output_size)
-        self.genome_length = self.nn.num_params
+        self.fall_penalty = float(ga_cfg.get('fall_penalty', 100.0))
 
         # ---- Population ----
         pop_size = ga_cfg['population_size']
@@ -147,6 +215,10 @@ class IAGenetic(IABase):
         # CSV de generation a cote des autres resultats du run.
         self.csv_file = str(self.results_run_dir / "generations.csv")
 
+        # ---- Archive des champions (meilleur genome de chaque generation) ----
+        self.champions: List[Dict[str, Any]] = []
+        self.champions_file = self.results_run_dir / "champions.pkl"
+
         # ---- MLflow tracking ----
         mlflow.set_tracking_uri(train_cfg['mlflow_tracking_uri'])
         mlflow.set_experiment(train_cfg['mlflow_experiment_name'])
@@ -157,46 +229,19 @@ class IAGenetic(IABase):
         print(f"📊 MLflow  : {train_cfg['mlflow_tracking_uri']} / "
               f"experiment={train_cfg['mlflow_experiment_name']}")
         print(f"🔢 Seed    : {self.seed}")
+        print(f"🧠 Reseau  : {self.input_size} -> {self.hidden_size} -> {self.output_size} "
+              f"({self.genome_length} params, proprio={self.policy.use_proprioception})")
 
     # ============ INFERENCE ============
 
-    def _build_input(self, time: float, dog_state: Dict[str, Any]) -> np.ndarray:
-        _, y = dog_state['position']
-        vx, vy = dog_state['velocity']
-        angle = dog_state['angle']
-
-        phase = 2.0 * np.pi * time / self.time_period
-        return np.array([
-            np.sin(phase),
-            np.cos(phase),
-            np.clip(vx / 5.0, -1.0, 1.0),
-            np.clip(vy / 5.0, -1.0, 1.0),
-            np.sin(angle),
-            np.cos(angle),
-            np.clip((y - 3.0) / 2.0, -1.0, 1.0),
-        ], dtype=np.float32)
-
     def get_action(self, time: float, dog_state: Dict[str, Any]) -> np.ndarray:
-        x = self._build_input(time, dog_state)
         genome = self.population[self.current_individual]
-        out = self.nn.forward(x, genome)
+        out = self.policy.act(time, dog_state, genome)
         self.current_frame += 1
         return out
 
-    def action_to_muscle_control(self, action: np.ndarray) -> List[Dict[str, Any]]:
-        commands = []
-        for i, value in enumerate(action):
-            if value > self.threshold:
-                commands.append({'muscle': i, 'action': 'contract'})
-            elif value < -self.threshold:
-                commands.append({'muscle': i, 'action': 'extend'})
-        return commands
-
     def apply_to_quadruped(self, quadruped, action: np.ndarray):
-        for i in range(self.output_size):
-            quadruped.control_muscles(i, 'relax')
-        for cmd in self.action_to_muscle_control(action):
-            quadruped.control_muscles(cmd['muscle'], cmd['action'])
+        self.policy.apply(quadruped, action)
 
     # ============ CYCLE D'EVALUATION ============
 
@@ -204,16 +249,19 @@ class IAGenetic(IABase):
         self.current_frame = 0
 
     def on_episode_end(self, distance: float, frames_survived: int, dog_state: Dict[str, Any]):
-        fitness = distance * 100.0 + frames_survived * 0.5
+        # Fitness = distance parcourue (x100), penalisee si le quadrupede tombe.
+        # Plus de bonus de survie : rester immobile ne rapporte plus rien.
+        is_fallen = bool(dog_state.get('is_fallen', False))
+        fitness = distance * 100.0
+        if is_fallen:
+            fitness -= self.fall_penalty
+
         self.fitness_scores[self.current_individual] = fitness
 
         if fitness > self.best_reward_ever:
             self.best_reward_ever = fitness
-            self.current_max_time = self._calculate_max_time_from_reward()
-            print(
-                f"🏆 Nouveau record: {fitness:.2f} → "
-                f"Temps: {self.current_max_time} frames"
-            )
+            # NB: current_max_time n'est PAS modifie ici (fige pour la generation).
+            print(f"🏆 Nouveau record intra-gen: {fitness:.2f}")
 
         if fitness > self.best_distance:
             self.best_distance = fitness
@@ -232,6 +280,13 @@ class IAGenetic(IABase):
     def _evolve_population(self):
         self.generation_best = max(self.fitness_scores)
         self.generation_avg = sum(self.fitness_scores) / len(self.fitness_scores)
+
+        # Champion de la generation (avant reset des scores) -> archive.
+        best_idx = max(range(len(self.fitness_scores)),
+                       key=lambda i: self.fitness_scores[i])
+        self._record_champion(self.generation, self.fitness_scores[best_idx],
+                              self.population[best_idx])
+
         self._save_generation_stats()
         self._log_generation_to_mlflow()
 
@@ -254,11 +309,19 @@ class IAGenetic(IABase):
         self.population = new_pop
         self.fitness_scores = [0.0] * len(self.population)
 
+        # Temps adaptatif : fige la duree d'episode pour TOUTE la generation
+        # suivante (evite que les individus tardifs aient plus de temps).
+        self.current_max_time = self._calculate_max_time_from_reward()
+
     def _tournament_selection(self, sorted_idx: List[int]) -> np.ndarray:
+        """Selection par tournoi CORRIGEE : le gagnant est le candidat au
+        meilleur fitness (auparavant `min(candidates)` prenait le plus petit
+        indice de population, ce qui rendait la selection quasi aleatoire)."""
         size = self.config.GA_CONFIG.get('tournament_size', 3)
         pool = sorted_idx[:max(size, len(sorted_idx) // 2)]
-        candidates = random.sample(pool, size)
-        winner = min(candidates)
+        k = min(size, len(pool))
+        candidates = random.sample(pool, k)
+        winner = max(candidates, key=lambda i: self.fitness_scores[i])
         return self.population[winner].copy()
 
     def _crossover(self, p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
@@ -284,6 +347,42 @@ class IAGenetic(IABase):
         )
         return self.config.GA_CONFIG['base_time'] + int(progress * time_range)
 
+    # ============ ARCHIVE DES CHAMPIONS ============
+
+    def _nn_config_for_save(self) -> Dict[str, Any]:
+        """Config minimale pour reconstruire la NeuroPolicy (rejeu)."""
+        return {
+            'input_size': self.policy.base_input,
+            'hidden_size': self.hidden_size,
+            'output_size': self.output_size,
+            'time_period': self.time_period,
+            'use_proprioception': self.policy.use_proprioception,
+            'max_muscle_speed': self.policy.max_muscle_speed,
+        }
+
+    def _record_champion(self, generation: int, fitness: float, genome: np.ndarray):
+        """Ajoute le champion de la generation a l'archive et sauvegarde.
+
+        Le rejeu est deterministe : conserver le genome suffit a reproduire
+        exactement le mouvement (pas besoin de logger les trajectoires).
+        """
+        self.champions.append({
+            'generation': int(generation),
+            'fitness': float(fitness),
+            'genome': np.asarray(genome, dtype=np.float32).copy(),
+        })
+        self._save_champions()
+
+    def _save_champions(self):
+        archive = {
+            'nn_config': self._nn_config_for_save(),
+            'model_name': self.model_name,
+            'run_number': self.run_number,
+            'champions': self.champions,
+        }
+        with open(self.champions_file, 'wb') as f:
+            pickle.dump(archive, f)
+
     # ============ LOGGING ============
 
     def _log_initial_params(self):
@@ -293,11 +392,12 @@ class IAGenetic(IABase):
             "run_number": self.run_number,
             "seed": self.seed,
             "genome_length": self.genome_length,
-            "input_size": self.input_size,
+            "input_size_effective": self.input_size,
             "hidden_size": self.hidden_size,
             "output_size": self.output_size,
-            "action_threshold": self.threshold,
+            "use_proprioception": self.policy.use_proprioception,
             "time_period": self.time_period,
+            "fall_penalty": self.fall_penalty,
             **{f"ga_{k}": v for k, v in self.config.GA_CONFIG.items()},
             **{f"train_{k}": v for k, v in self.config.TRAINING_CONFIG.items()
                if k not in {"mlflow_tracking_uri", "mlflow_experiment_name"}},
@@ -359,13 +459,8 @@ class IAGenetic(IABase):
             'best_reward_ever': self.best_reward_ever,
             'current_max_time': self.current_max_time,
             'seed': self.seed,
-            'nn_config': {
-                'input_size': self.input_size,
-                'hidden_size': self.hidden_size,
-                'output_size': self.output_size,
-                'threshold': self.threshold,
-                'time_period': self.time_period,
-            },
+            'genome_length': self.genome_length,
+            'nn_config': self._nn_config_for_save(),
             'parameters': {
                 'population_size': self.config.GA_CONFIG['population_size'],
                 'mutation_rate': self.config.GA_CONFIG['mutation_rate'],
@@ -389,12 +484,16 @@ class IAGenetic(IABase):
         with open(primary, 'wb') as f:
             pickle.dump(save_data, f)
 
+        # S'assure que l'archive des champions est a jour sur le disque.
+        self._save_champions()
+
         # Snapshot des metriques courantes pour reference rapide.
         metrics = {
             "generation": self.generation,
             "best_distance": self.best_distance,
             "best_reward_ever": self.best_reward_ever,
             "current_max_time": self.current_max_time,
+            "num_champions": len(self.champions),
         }
         with open(self.results_run_dir / "metrics.json", "w") as f:
             json.dump(metrics, f, indent=2)
@@ -419,19 +518,23 @@ class IAGenetic(IABase):
         with open(filepath, 'rb') as f:
             data = pickle.load(f)
 
-        nn_cfg = data.get('nn_config', {})
-        if nn_cfg:
-            assert nn_cfg.get('input_size') == self.input_size, (
-                "Architecture du reseau incompatible (input_size different)"
-            )
-            assert nn_cfg.get('hidden_size') == self.hidden_size, (
-                "Architecture du reseau incompatible (hidden_size different)"
-            )
-            assert nn_cfg.get('output_size') == self.output_size, (
-                "Architecture du reseau incompatible (output_size different)"
-            )
+        saved_pop = data.get('population', [])
+        if not saved_pop:
+            print("⚠️ Sauvegarde vide : nouvelle IA conservee.")
+            return
 
-        self.population = data['population']
+        # Verifie la compatibilite d'architecture (taille du genome).
+        saved_len = int(np.asarray(saved_pop[0]).ravel().shape[0])
+        if saved_len != self.genome_length:
+            print(
+                f"⚠️ Checkpoint incompatible (genome {saved_len} vs "
+                f"{self.genome_length} attendu). Nouvelle IA demarree.\n"
+                f"   Le checkpoint reste rejouable avec son ancienne "
+                f"architecture (replay.py)."
+            )
+            return
+
+        self.population = [np.asarray(g, dtype=np.float32) for g in saved_pop]
         self.fitness_scores = data.get(
             'fitness_scores', [0.0] * len(self.population)
         )
@@ -450,7 +553,13 @@ class IAGenetic(IABase):
 
     def close(self):
         """Termine proprement le run MLflow. A appeler depuis main.py."""
+        # Sauvegarde finale de l'archive des champions.
+        self._save_champions()
         if self._mlflow_run is not None:
+            try:
+                mlflow.log_artifact(str(self.champions_file), artifact_path="results")
+            except Exception:
+                pass
             mlflow.end_run()
             self._mlflow_run = None
             print("📊 Run MLflow termine")
