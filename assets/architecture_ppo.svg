@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700">
+  <defs>
+    <style>
+      .layer-box { stroke-width: 2; }
+      .label { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #1E293B; }
+      .param-label { font-family: Arial, sans-serif; font-size: 11px; fill: #475569; }
+      .section-title { font-family: Arial, sans-serif; font-size: 20px; font-weight: bold; fill: #0F172A; }
+      .formula { font-family: monospace; font-size: 10px; fill: #1E293B; }
+      .arrow { stroke: #64748B; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .section-label { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #0F172A; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#64748B" />
+    </marker>
+  </defs>
+
+  <rect width="1000" height="700" fill="#FFFFFF" />
+
+  <text x="500" y="40" class="section-title" text-anchor="middle">PPO Actor-Critic (custom PyTorch)</text>
+
+  <!-- Input State -->
+  <g>
+    <rect x="360" y="70" width="280" height="70" class="layer-box" fill="#FEF3C7" stroke="#F59E0B" rx="4" />
+    <text x="500" y="100" class="label" text-anchor="middle">State Input</text>
+    <text x="500" y="122" class="param-label" text-anchor="middle">23 features (normalized, running mean/std)</text>
+  </g>
+
+  <path d="M 430 140 L 340 175" class="arrow" />
+  <path d="M 570 140 L 660 175" class="arrow" />
+
+  <!-- Actor Head -->
+  <g>
+    <rect x="120" y="175" width="330" height="130" class="layer-box" fill="#EEF2FF" stroke="#6366F1" rx="4" />
+    <text x="285" y="205" class="section-label" text-anchor="middle">Actor</text>
+    <text x="285" y="228" class="param-label" text-anchor="middle">Linear(23) → tanh → Linear(64) → tanh</text>
+    <text x="285" y="246" class="param-label" text-anchor="middle">→ Linear(64) → tanh mean (8)</text>
+    <text x="285" y="268" class="param-label" text-anchor="middle">Diagonal Gaussian: N(mean, exp(log_std))</text>
+    <text x="285" y="288" class="param-label" text-anchor="middle">Output: pi(a|s)</text>
+  </g>
+
+  <!-- Critic Head -->
+  <g>
+    <rect x="550" y="175" width="330" height="130" class="layer-box" fill="#F5F3FF" stroke="#8B5CF6" rx="4" />
+    <text x="715" y="205" class="section-label" text-anchor="middle">Critic</text>
+    <text x="715" y="228" class="param-label" text-anchor="middle">Linear(23) → tanh → Linear(64) → tanh</text>
+    <text x="715" y="246" class="param-label" text-anchor="middle">→ Linear(64) → tanh → Linear(1)</text>
+    <text x="715" y="268" class="param-label" text-anchor="middle">Output: V(s) (state value)</text>
+  </g>
+
+  <path d="M 285 305 L 285 340" class="arrow" />
+  <path d="M 715 305 L 715 340" class="arrow" />
+
+  <!-- Actor Output -->
+  <g>
+    <rect x="150" y="340" width="270" height="75" class="layer-box" fill="#ECFDF5" stroke="#10B981" rx="4" />
+    <text x="285" y="370" class="label" text-anchor="middle">8 muscle activations</text>
+    <text x="285" y="392" class="param-label" text-anchor="middle">sampled (train) / mean (play)</text>
+    <text x="285" y="407" class="param-label" text-anchor="middle">clipped to [-1, 1]</text>
+  </g>
+
+  <!-- Critic Output -->
+  <g>
+    <rect x="580" y="340" width="270" height="75" class="layer-box" fill="#ECFDF5" stroke="#10B981" rx="4" />
+    <text x="715" y="370" class="label" text-anchor="middle">Value estimate</text>
+    <text x="715" y="392" class="param-label" text-anchor="middle">used by GAE (lambda = 0.95)</text>
+    <text x="715" y="407" class="param-label" text-anchor="middle">bootstraps truncated episodes</text>
+  </g>
+
+  <!-- Vectorized envs -->
+  <g>
+    <rect x="50" y="455" width="900" height="70" class="layer-box" fill="#F1F5F9" stroke="#94A3B8" rx="4" />
+    <text x="500" y="480" class="section-label" text-anchor="middle">Vectorized Box2D environments</text>
+    <text x="500" y="504" class="param-label" text-anchor="middle">16 worlds x 256 steps = 4096 transitions per update  •  reward = forward progress x 100, fall penalty</text>
+  </g>
+
+  <!-- PPO Loss -->
+  <g>
+    <rect x="50" y="545" width="900" height="120" class="layer-box" fill="#F8FAFC" stroke="#CBD5E1" rx="4" />
+    <text x="500" y="570" class="section-label" text-anchor="middle">PPO Objective &amp; Training</text>
+    <text x="70" y="596" class="formula">Advantage: GAE  A = sum (gamma*lambda)^k * delta_k   with gamma = 0.99, lambda = 0.95</text>
+    <text x="70" y="616" class="formula">Actor: L = -E[ min( r(theta)*A , clip(r(theta), 1-eps, 1+eps)*A ) ]   with eps = 0.2</text>
+    <text x="70" y="636" class="formula">Critic: L = E[(V(s) - return)^2]     Total: L_actor + 0.5*L_critic - 0.003*entropy</text>
+    <text x="70" y="656" class="formula">Adam lr = 3e-4, 10 epochs, minibatch = 256, grad clip = 0.5   |   headless, CPU or GPU</text>
+  </g>
+</svg>

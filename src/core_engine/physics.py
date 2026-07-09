@@ -15,10 +15,19 @@ class PhysicsWorld:
         self.create_ground()
 
     def create_ground(self):
-        """Crée le sol"""
+        """Crée le sol.
+
+        Le sol est un UNIQUE corps statique : sa taille n'a aucun impact sur le
+        coût de simulation (un rectangle de 2000 m coûte autant qu'un de 160 m).
+        On le fait donc très large (demi-largeur 1000 -> terrain de 2000 m,
+        centré sur l'origine, de -1000 à +1000 en x). L'animal apparaît à x=6
+        et court vers +x : de quoi tenir de très longs épisodes et de longues
+        visualisations sans jamais atteindre le bord. Rester sous ~1000 m garde
+        la physique numériquement stable (positions en float32).
+        """
         self.ground = self.world.CreateStaticBody(
             position=(0, 0),
-            shapes=b2PolygonShape(box=(80, 0.5)) # rect de largeur 40 (en gros on part du centre et on fait 20 de chaque côté)
+            shapes=b2PolygonShape(box=(1000, 0.5))
         )
         self.ground.fixtures[0].friction = 0.8
 

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" width="1000" height="520">
+  <defs>
+    <style>
+      .layer-box { stroke-width: 2; }
+      .label { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #1E293B; }
+      .param-label { font-family: Arial, sans-serif; font-size: 11px; fill: #475569; }
+      .section-title { font-family: Arial, sans-serif; font-size: 20px; font-weight: bold; fill: #0F172A; }
+      .section-label { font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; fill: #0F172A; }
+      .arrow { stroke: #64748B; stroke-width: 2.5; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#64748B" />
+    </marker>
+  </defs>
+
+  <rect width="1000" height="520" fill="#FFFFFF" />
+
+  <text x="500" y="40" class="section-title" text-anchor="middle">Neuro-Evolution (MLP evolved by a Genetic Algorithm)</text>
+
+  <!-- Input -->
+  <g>
+    <rect x="60" y="90" width="180" height="150" class="layer-box" fill="#FEF3C7" stroke="#F59E0B" rx="4" />
+    <text x="150" y="130" class="label" text-anchor="middle">State Input</text>
+    <text x="150" y="152" class="param-label" text-anchor="middle">23 features</text>
+    <text x="150" y="172" class="param-label" text-anchor="middle">7 base (phase, vel, angle, height)</text>
+    <text x="150" y="188" class="param-label" text-anchor="middle">+ 2 x 8 proprioception</text>
+    <text x="150" y="204" class="param-label" text-anchor="middle">(joint angle + speed)</text>
+  </g>
+
+  <path d="M 240 165 L 300 165" class="arrow" />
+
+  <!-- Hidden -->
+  <g>
+    <rect x="300" y="90" width="180" height="150" class="layer-box" fill="#F0F9FF" stroke="#0EA5E9" rx="4" />
+    <text x="390" y="150" class="label" text-anchor="middle">Hidden</text>
+    <text x="390" y="172" class="param-label" text-anchor="middle">16 neurons</text>
+    <text x="390" y="190" class="param-label" text-anchor="middle">tanh</text>
+  </g>
+
+  <path d="M 480 165 L 540 165" class="arrow" />
+
+  <!-- Output -->
+  <g>
+    <rect x="540" y="90" width="180" height="150" class="layer-box" fill="#ECFDF5" stroke="#10B981" rx="4" />
+    <text x="630" y="140" class="label" text-anchor="middle">Output</text>
+    <text x="630" y="162" class="param-label" text-anchor="middle">8 muscle activations</text>
+    <text x="630" y="180" class="param-label" text-anchor="middle">tanh, continuous [-1, 1]</text>
+    <text x="630" y="198" class="param-label" text-anchor="middle">extend / relax / contract</text>
+  </g>
+
+  <path d="M 720 165 L 780 165" class="arrow" />
+
+  <!-- Muscles -->
+  <g>
+    <rect x="780" y="90" width="160" height="150" class="layer-box" fill="#FEF2F2" stroke="#EF4444" rx="4" />
+    <text x="860" y="150" class="label" text-anchor="middle">Box2D muscles</text>
+    <text x="860" y="172" class="param-label" text-anchor="middle">joint motors</text>
+    <text x="860" y="190" class="param-label" text-anchor="middle">→ the animal moves</text>
+  </g>
+
+  <!-- Details -->
+  <g>
+    <text x="60" y="300" class="section-label">Network</text>
+    <text x="80" y="324" class="param-label">• Genome = flattened weights + biases (520 params)</text>
+    <text x="80" y="342" class="param-label">• Reactive closed-loop policy (acts on live state)</text>
+    <text x="80" y="360" class="param-label">• Pure NumPy forward pass (no backprop)</text>
+
+    <text x="60" y="404" class="section-label">Genetic Algorithm</text>
+    <text x="80" y="428" class="param-label">• Population of genomes, tournament selection</text>
+    <text x="80" y="446" class="param-label">• Elitism + uniform crossover + Gaussian mutation</text>
+    <text x="80" y="464" class="param-label">• Fitness = forward distance x 100 (fall penalty)</text>
+
+    <text x="540" y="300" class="section-label">Training</text>
+    <text x="560" y="324" class="param-label">• Headless + parallel across all CPU cores (train.py)</text>
+    <text x="560" y="342" class="param-label">• Early stop of stagnant episodes</text>
+    <text x="560" y="360" class="param-label">• MLflow tracking + per-generation champions archive</text>
+
+    <text x="540" y="404" class="section-label">Replay</text>
+    <text x="560" y="428" class="param-label">• Deterministic physics → champions replayable</text>
+    <text x="560" y="446" class="param-label">• replay.py steps through every generation's best</text>
+  </g>
+</svg>
