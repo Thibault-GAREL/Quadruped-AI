@@ -65,7 +65,9 @@ class NeuroGASettings(BaseSettings):
     # l'episode. cos(angle) vaut 1 quand le dos est horizontal, 0 a la verticale,
     # negatif si retourne. Garder le poids MODESTE devant le gain de distance
     # (sinon un individu immobile mais bien droit peut battre un marcheur).
-    USE_STABILITY_REWARD: bool = False
+    # Active par defaut pour la poule (bipede instable), off pour le renard.
+    # Surchargeable via NEURO_GA_USE_STABILITY_REWARD.
+    USE_STABILITY_REWARD: bool = (ANIMAL == "chicken")
     STABILITY_WEIGHT: float = Field(50.0, ge=0.0)
 
     # ----- Temps adaptatif -----

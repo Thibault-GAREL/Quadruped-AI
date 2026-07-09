@@ -39,10 +39,10 @@ class PhysicsWorld:
 class Bone:
     """Représente un os du squelette"""
 
-    def __init__(self, world, x, y, width, height, density=5.0, group_index=0):
+    def __init__(self, world, x, y, width, height, density=5.0, group_index=0, angle=0.0):
         self.body = world.CreateDynamicBody(
             position=(x, y),
-            angle=0
+            angle=angle
         )
         self.fixture = self.body.CreatePolygonFixture(
             box=(width / 2, height / 2),
@@ -131,7 +131,7 @@ class Quadruped:
         self.bones_by_name = {}
         for bd in definition.skeleton.bones:
             bone = Bone(world, x + bd.dx, y + bd.dy, bd.width, bd.height,
-                        density=bd.density, group_index=group_index)
+                        density=bd.density, group_index=group_index, angle=bd.angle)
             self.bones_by_name[bd.name] = bone
             # Accès direct type quadruped.front_thigh (compat overlay/replay).
             setattr(self, bd.name, bone)
@@ -182,7 +182,9 @@ class Quadruped:
         Contrairement à control_muscles (ternaire tout-ou-rien), l'intensité
         est proportionnelle, ce qui autorise des démarches beaucoup plus fluides.
         """
-        if 0 <= muscle_index < len(self.muscles):
+        # Idem control_muscles : seuls les muscles actionnes sont pilotables
+        # (le cou/la tete restent hors de controle IA et humain).
+        if 0 <= muscle_index < self.num_actuated:
             muscle = self.muscles[muscle_index]
             activation = max(-1.0, min(1.0, float(activation)))
             if activation > 0:
@@ -196,6 +198,26 @@ class Quadruped:
         """Met à jour tous les muscles"""
         for muscle in self.muscles:
             muscle.update()
+
+    def debug_print(self, time_s=None):
+        """Affiche la position/angle de chaque os et l'angle de chaque muscle.
+
+        Sert a trouver une pose d'equilibre : on lit ici les angles absolus
+        des os (a recopier dans BoneDef(..., angle=...)) et les angles relatifs
+        des joints (a comparer aux limites min/max des muscles).
+        """
+        tag = f" (t={time_s:.1f}s)" if time_s is not None else ""
+        print(f"\n===== ETAT{tag} =====")
+        print("  Os : position (x, y) | angle absolu")
+        for name, bone in self.bones_by_name.items():
+            p = bone.body.position
+            a = bone.body.angle
+            print(f"    {name:14s} pos=({p.x:6.2f},{p.y:6.2f})  "
+                  f"angle={math.degrees(a):7.1f}deg ({a:+.3f} rad)")
+        print("  Muscles : angle du joint")
+        for name, m in self.muscles_by_name.items():
+            a = m.get_angle()
+            print(f"    {name:16s} = {math.degrees(a):7.1f}deg ({a:+.3f} rad)")
 
     def get_state(self):
         """Retourne l'état du quadrupède (pour l'IA plus tard)"""

@@ -187,18 +187,45 @@ ANIMAL  = "fox"        # "fox" (quadruped) or "chicken" (biped)
 IA_TYPE = "neuro_ga"   # "neuro_ga", "ppo" or "choreography"
 ```
 
-### 🏋️ Train (headless & parallel, recommended)
+### 🕹️ Play & watch (`main.py`)
 ```bash
-python train.py --algo ga      # neuro-evolution on all CPU cores
-python train.py --algo ppo     # PPO (needs PyTorch)
+python main.py
 ```
-Both save checkpoints regularly and **resume automatically** if you relaunch them. See `RUNPOD.md` to run a long training on a **Runpod CPU pod** (this project is CPU-bound, no GPU needed).
+`main.py` opens the Pygame window. What it does depends on `src/config.py` :
 
-### 👀 Watch a trained policy
+  🎮 `HUMAN_CONTROL = True` : drive the animal yourself with the keyboard.
+
+  🤖 `HUMAN_CONTROL = False` + `IA_TYPE = "neuro_ga"` : train the genetic algorithm live in the window.
+
+  🐤 `IA_TYPE = "ppo"` : watch a PPO policy trained with `train.py`.
+
+In-window keys : `TAB` switch render mode (procedural / skeleton / overlay), `F1` camera follow, `F2` toggle rendering (fast mode), `S` save, `ESC` quit.
+
+### 🏋️ Train headless & in parallel (`train.py`, recommended)
+No window, all cores, much faster than the on-screen loop. It **auto-resumes** from the last checkpoint if you relaunch it.
 ```bash
-python main.py       # uses IA_TYPE from src/config.py
-python replay.py     # replay the GA champions, generation by generation
+python train.py --algo ga      # neuro-evolution (genetic algorithm), uses ALL CPU cores
+python train.py --algo ppo     # PPO (needs PyTorch), uses your GPU automatically if present
 ```
+Push it to the max (PowerShell, Windows) :
+```powershell
+# GA : one worker per core + a bigger population (free when you have the cores)
+python train.py --algo ga --workers 16
+$env:NEURO_GA_POPULATION_SIZE = "128" ; python train.py --algo ga --generations 500
+
+# PPO : pick the device and scale the parallel Box2D worlds
+$env:PPO_DEVICE = "cuda" ; python train.py --algo ppo      # "cuda" (GPU), "cpu", or "auto" (default)
+$env:PPO_N_ENVS = "32"   ; python train.py --algo ppo --updates 1000
+```
+⚠️ This project is **CPU-bound** (the Box2D physics runs on the CPU and the networks are tiny). The GA gains **nothing** from a GPU, and even PPO is often just as fast on CPU. Prefer a **many-core CPU** machine (only one GPU is ever used, no multi-GPU). See `RUNPOD.md` for a long training on a **Runpod CPU pod**.
+
+### 🎬 Replay the GA champions (`replay.py`)
+```bash
+python replay.py       # best champion of the latest run, walking in the scenery
+python replay.py outputs/results/neuro-ga_run-03_date-2026-07-09   # a specific run
+```
+Keys : `→ / ←` next / previous generation, `↑` jump to the best, `SPACE` replay from start, `ESC` quit.
+(Set `ANIMAL` in `src/config.py` to match the animal you trained.)
 
 ---
 

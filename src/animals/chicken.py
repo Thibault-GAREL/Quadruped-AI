@@ -26,24 +26,38 @@ from src.animals.definition import (
 # moitie de la hauteur du corps.
 WIDTH_BONE = 0.05
 BODY_LEN = 0.8
-DENSITY_BONE = 0.5
+DENSITY_BONE = 0.15
+DENSITY_BACK = 0.1
 THIGH_LEN = 0.22
 SHIN_LEN = 0.22
 SHANK_LEN = 0.18   # tarsometatarse : la partie fine et jaune de la patte
-FOOT_LEN = 0.18
+FOOT_LEN = 0.28
 NECK_LEN = 0.28
 HEAD_LEN = 0.22
 MARGE = 0.05
-HIP_X = 0.06       # les hanches sont proches du centre (ecart avant/arriere leger)
+HIP_X = 0.0      # x d'attache des pattes sur le corps (issu de la pose d'equilibre)
+# Tete et cou alleges : etant en avant du corps, leur masse cree un bras de
+# levier qui fait piquer la poule vers l'avant. Densites reduites pour limiter
+# ce basculement (la tete surtout, plus eloignee du centre).
+NECK_DENSITY = 0.05
+HEAD_DENSITY = 0.15
 
 
 def _leg_bones(side: str, hip_x: float):
-    """Os d'une patte (side = 'right' ou 'left')."""
+    """Os d'une patte SIMPLIFIEE a 3 segments : cuisse -> mollet -> pied.
+
+    Le tarse ('shank') a ete retire pour simplifier (moins d'articulations
+    a coordonner). Le pied est desormais rattache directement au mollet.
+    """
+    # Pose d'EQUILIBRE (mesuree via debug_print puis recopiee ici) : positions
+    # relatives au corps + angles d'apparition. La poule nait donc directement
+    # accroupie et stable, sans secousse (les joints sont deja dans leurs limites).
     return [
-        BoneDef(f'{side}_thigh', hip_x, -0.17, WIDTH_BONE, THIGH_LEN, DENSITY_BONE),
-        BoneDef(f'{side}_shin', hip_x, -0.39, WIDTH_BONE, SHIN_LEN, DENSITY_BONE),
-        BoneDef(f'{side}_shank', hip_x, -0.59, WIDTH_BONE, SHANK_LEN, DENSITY_BONE),
-        BoneDef(f'{side}_foot', hip_x - 0.08, -0.72, WIDTH_BONE, FOOT_LEN, DENSITY_BONE),
+        BoneDef(f'{side}_thigh', hip_x,         -0.12, WIDTH_BONE, THIGH_LEN, DENSITY_BONE, angle=-0.4),   # cuisse
+        BoneDef(f'{side}_shin',  hip_x,         -0.30, WIDTH_BONE, SHIN_LEN,  DENSITY_BONE, angle=0.3),  # mollet
+        # --- Segment retire (simplification 3 os) : le tarse ---
+        # BoneDef(f'{side}_shank', hip_x, 0, WIDTH_BONE, SHANK_LEN, DENSITY_BONE),
+        BoneDef(f'{side}_foot',  hip_x + 0.035, -0.52, WIDTH_BONE, FOOT_LEN, DENSITY_BONE, angle=0.6),   # pied
     ]
 
 
@@ -52,32 +66,36 @@ def _leg_muscles(side: str, hip_x: float):
     return [
         MuscleDef(f'{side}_hip', 'body', f'{side}_thigh',
                   (hip_x, -WIDTH_BONE), (0, THIGH_LEN / 2 + MARGE),
-                  -math.pi * 0.3, math.pi * 0.35, max_torque=3000, actuated=True),
+                  -math.pi * 0.3, math.pi * 0.7, max_torque=3000, actuated=True),
         MuscleDef(f'{side}_knee', f'{side}_thigh', f'{side}_shin',
                   (0, -THIGH_LEN / 2 + MARGE), (0, SHIN_LEN / 2 + MARGE),
                   -math.pi * 0.7, 0, max_torque=3500, actuated=True),
-        MuscleDef(f'{side}_ankle', f'{side}_shin', f'{side}_shank',
-                  (0, -SHIN_LEN / 2 + MARGE), (0, SHANK_LEN / 2 + MARGE),
-                  -math.pi * 0.7, 0, max_torque=3500, actuated=True),
-        MuscleDef(f'{side}_foot_joint', f'{side}_shank', f'{side}_foot',
-                  (WIDTH_BONE, -(SHANK_LEN / 2 + MARGE)), (WIDTH_BONE, MARGE),
-                  math.pi * 0.3, math.pi * 0.6, max_torque=1500, actuated=True),
+        # --- Muscle retire (simplification 3 os) : cheville shin -> shank ---
+        # MuscleDef(f'{side}_ankle', f'{side}_shin', f'{side}_shank',
+        #           (0, -SHIN_LEN / 2 + MARGE), (0, SHANK_LEN / 2 + MARGE),
+        #           -math.pi * 0.0, math.pi * 0.7, max_torque=3500, actuated=True),
+        # Le pied est desormais rattache au MOLLET (shin), plus au tarse.
+        MuscleDef(f'{side}_foot_joint', f'{side}_shin', f'{side}_foot',
+                  (WIDTH_BONE, -(SHIN_LEN / 2 + MARGE)), (WIDTH_BONE, MARGE),
+                  math.pi * 0.3, math.pi * 0.8, max_torque=1500, actuated=True),
     ]
 
 
 def _build_skeleton() -> SkeletonDef:
+    # Pose d'equilibre : le corps est legerement incline (0.11 rad), le cou et
+    # la tete naissent dans leur orientation stabilisee (aucune secousse).
     bones = [
-        BoneDef('body', 0.0, 0.0, BODY_LEN, WIDTH_BONE, DENSITY_BONE),
+        BoneDef('body', 0.0, 0.0, BODY_LEN, WIDTH_BONE, DENSITY_BACK, angle=0),
         *_leg_bones('right', HIP_X),
-        *_leg_bones('left', -HIP_X),
-        BoneDef('neck', 0.50, 0.18, WIDTH_BONE, NECK_LEN, DENSITY_BONE),
-        BoneDef('head', 0.55, 0.31, WIDTH_BONE, HEAD_LEN, DENSITY_BONE),
+        *_leg_bones('left', HIP_X),
+        BoneDef('neck', 0.47, 0.24, WIDTH_BONE, NECK_LEN, NECK_DENSITY, angle=0),
+        BoneDef('head', 0.52, 0.49, WIDTH_BONE, HEAD_LEN, HEAD_DENSITY, angle=0),
     ]
 
     # Les 8 muscles actionnes d'abord (patte droite puis gauche).
     muscles = [
         *_leg_muscles('right', HIP_X),
-        *_leg_muscles('left', -HIP_X),
+        *_leg_muscles('left', HIP_X),
         # Cou quasi vertical et tete bec vers l'avant : joints figes.
         MuscleDef('neck_joint', 'body', 'neck',
                   (BODY_LEN / 2 + MARGE, WIDTH_BONE), (0, NECK_LEN / 2),
@@ -184,18 +202,18 @@ def _build_skin() -> SkinSpec:
     # ears[0] est dessinee derriere le crane (crete), les suivantes devant.
     ears = [comb, wattle]
 
-    # ----- Pattes : cuisse et pilon emplumes, tarse et orteils jaunes -----
+    # ----- Pattes (3 os) : cuisse et mollet emplumes, pied jaune -----
     def leg_styles(side):
         return {
             f'{side}_thigh': LegStyle(hw_top=0.10, hw_bottom=0.06, color='plumage'),
             f'{side}_shin': LegStyle(hw_top=0.165, hw_bottom=0.065, color='plumage'),
-            f'{side}_shank': LegStyle(hw_top=0.05, hw_bottom=0.03, color='legs_y'),
+            # f'{side}_shank': LegStyle(hw_top=0.05, hw_bottom=0.03, color='legs_y'),  # retire (3 os)
             f'{side}_foot': LegStyle(hw_top=0.025, hw_bottom=0.02, color='legs_y'),
         }
 
     legs = {**leg_styles('right'), **leg_styles('left')}
-    leg_chains = [['right_thigh', 'right_shin', 'right_shank', 'right_foot']]
-    far_leg_chains = [['left_thigh', 'left_shin', 'left_shank', 'left_foot']]
+    leg_chains = [['right_thigh', 'right_shin', 'right_foot']]
+    far_leg_chains = [['left_thigh', 'left_shin', 'left_foot']]
 
     # ----- Queue en eventail : chaine courte et rigide, elle fretille -----
     tail = TailSpec(
@@ -235,6 +253,6 @@ CHICKEN = AnimalDefinition(
     name='chicken',
     skeleton=_build_skeleton(),
     skin=_build_skin(),
-    spawn_y=1.32,   # la poule apparait juste au-dessus du sol
+    spawn_y=1.08,  # hauteur du corps dans la pose d'equilibre (pieds au sol)
     has_legacy_textures=False,
 )

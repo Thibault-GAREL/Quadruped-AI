@@ -50,7 +50,8 @@ class PPOSettings(BaseSettings):
     # Bonus de stabilite (dos parallele au sol) : ajoute STABILITY_COEF * cos(angle)
     # a CHAQUE step. Meme critere que le GA, mais applique par pas (PPO optimise
     # par transition). Garder le coef modeste devant le reward de progression.
-    USE_STABILITY_REWARD: bool = False
+    # Active par defaut pour la poule (bipede), surchargeable via PPO_USE_STABILITY_REWARD.
+    USE_STABILITY_REWARD: bool = (ANIMAL == "chicken")
     STABILITY_COEF: float = Field(1.0, ge=0.0)
 
     # ----- Optimisation PPO -----

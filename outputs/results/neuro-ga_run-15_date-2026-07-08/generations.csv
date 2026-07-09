@@ -1,0 +1,2 @@
+generation,timestamp,duration_seconds,fitness_best,fitness_avg,fitness_worst,fitness_std,best_distance_ever,current_max_time,population_size,mutation_rate,mutation_strength,elite_size
+0,2026-07-08 16:27:59,17.88571,2532.162063598633,219.27030814886092,-68.85748863220215,534.9012886413288,2773.295608520508,1886,80,0.1,0.2,4

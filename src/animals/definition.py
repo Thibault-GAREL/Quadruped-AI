@@ -26,6 +26,9 @@ class BoneDef:
     width: float        # largeur de la boite Box2D
     height: float       # hauteur de la boite Box2D
     density: float = 0.5
+    angle: float = 0.0  # orientation d'apparition (rad) : permet une pose de
+                        # depart deja stable (pieds a plat, joints dans leurs
+                        # limites) au lieu de tous les os a l'horizontale.
 
 
 @dataclass

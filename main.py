@@ -1,5 +1,6 @@
 import math
 import pickle
+import time
 
 import pygame
 from src.core_engine.physics import PhysicsWorld, Quadruped
@@ -156,6 +157,7 @@ def main():
     # Boucle principale
     running = True
     frame_count = 0
+    last_debug_time = time.time()  # pour le print de pose toutes les 5s
     while running:
         frame_count += 1
         episode_time += TIME_STEP
@@ -275,6 +277,13 @@ def main():
 
         # Accumule la stabilite (cos de l'angle du corps) apres le pas physique.
         episode_uprightness_sum += math.cos(quadruped.body.body.angle)
+
+        # ===== DEBUG POSE : etat complet toutes les 5 secondes =====
+        # Pour regler une pose d'equilibre : lire les angles des os et des joints.
+        # now = time.time()
+        # if now - last_debug_time >= 5.0:
+        #     quadruped.debug_print(episode_time)
+        #     last_debug_time = now
 
         # ===== ÉVALUATION DE L'IA =====
         if not HUMAN_CONTROL:

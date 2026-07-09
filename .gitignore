@@ -16,8 +16,17 @@ __pycache__/
 venv/
 env/
 
-# Outputs (entrainement, MLflow, modeles)
-/outputs/
+# Outputs : on GARDE les modeles et resultats sur GitHub (necessaires aux
+# replays et au partage), on ignore le reste (logs MLflow volumineux).
+/outputs/*
+!/outputs/models/
+!/outputs/results/
+# Mais pas les sauvegardes .bak (backups locaux inutiles a partager).
+outputs/models/*.bak*
+outputs/models/**/*.bak*
+
+# MLflow : base binaire regenerable et volumineuse (les metriques utiles sont
+# deja dans outputs/results/*/metrics.json et generations.csv).
 /mlruns/
 mlflow.db
 mlflow.db-journal
