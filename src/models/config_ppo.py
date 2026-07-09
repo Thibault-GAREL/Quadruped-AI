@@ -47,6 +47,11 @@ class PPOSettings(BaseSettings):
     # penalite en cas de chute, cout d'action optionnel.
     FALL_PENALTY: float = Field(100.0, ge=0.0)
     ACTION_COST: float = Field(0.0, ge=0.0)
+    # Bonus de stabilite (dos parallele au sol) : ajoute STABILITY_COEF * cos(angle)
+    # a CHAQUE step. Meme critere que le GA, mais applique par pas (PPO optimise
+    # par transition). Garder le coef modeste devant le reward de progression.
+    USE_STABILITY_REWARD: bool = False
+    STABILITY_COEF: float = Field(1.0, ge=0.0)
 
     # ----- Optimisation PPO -----
     TOTAL_UPDATES: int = Field(500, ge=1)  # 500 updates x (16 envs x 256 steps) = ~2M steps

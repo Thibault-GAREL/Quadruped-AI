@@ -20,6 +20,7 @@ Visualisation : IA_TYPE = "ppo" dans src/config.py puis python main.py
 """
 
 import json
+import math
 import os
 import pickle
 import random
@@ -191,6 +192,10 @@ class QuadrupedEnv:
         if self.s.ACTION_COST > 0:
             reward -= self.s.ACTION_COST * float(np.sum(np.square(action)))
 
+        # Bonus de stabilite optionnel : dos parallele au sol (cos de l'angle).
+        if self.s.USE_STABILITY_REWARD:
+            reward += self.s.STABILITY_COEF * math.cos(self.quad.body.body.angle)
+
         terminated = self.quad.is_upside_down()
         if terminated:
             reward -= self.s.FALL_PENALTY
@@ -341,6 +346,8 @@ def run_training(animal_name: str, total_updates: int = 0):
         'max_episode_frames': s.MAX_EPISODE_FRAMES,
         'stagnation_frames': s.STAGNATION_FRAMES,
         'fall_penalty': s.FALL_PENALTY, 'total_updates': total_updates,
+        'use_stability_reward': s.USE_STABILITY_REWARD,
+        'stability_coef': s.STABILITY_COEF,
     })
 
     print(f"📁 Run dir : {run_dir}")

@@ -1,3 +1,4 @@
+import math
 import pickle
 
 import pygame
@@ -53,6 +54,8 @@ def main():
 
     episode_time = 0.0
     episode_start_x = quadruped.body.body.position.x
+    # Somme de cos(angle du corps) sur l'episode -> moyenne = stabilite (uprightness).
+    episode_uprightness_sum = 0.0
 
     # Ajouter des couches d'arrière-plan
     parallax.add_layer("assets/cloud.png", depth=0.07, x_position=-1, y_position=6, repeat=True, repeat_spacing=(9, 12),
@@ -270,6 +273,9 @@ def main():
         quadruped.update()
         physics_world.step(TIME_STEP)
 
+        # Accumule la stabilite (cos de l'angle du corps) apres le pas physique.
+        episode_uprightness_sum += math.cos(quadruped.body.body.angle)
+
         # ===== ÉVALUATION DE L'IA =====
         if not HUMAN_CONTROL:
             current_x = quadruped.body.body.position.x
@@ -281,6 +287,8 @@ def main():
                 distance = current_x - episode_start_x
                 # Transmet l'etat de chute a l'IA (fitness penalisee si tombe).
                 dog_state['is_fallen'] = is_fallen
+                # Moyenne de stabilite sur l'episode (pour le bonus optionnel).
+                dog_state['uprightness'] = episode_uprightness_sum / max(frame_count, 1)
                 ia.on_episode_end(distance, frame_count, dog_state)
 
                 # Vérifier si on doit reset
@@ -312,6 +320,7 @@ def main():
 
                     episode_time = 0.0
                     episode_start_x = quadruped.body.body.position.x
+                    episode_uprightness_sum = 0.0
                     frame_count = 0
 
                     ia.reset_episode()

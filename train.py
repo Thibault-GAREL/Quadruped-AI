@@ -106,8 +106,9 @@ def train_ga(args):
                                      total=len(tasks),
                                      desc=f"Gen {ia.generation}"))
 
-            for distance, frames, is_fallen in results:
-                ia.on_episode_end(distance, frames, {'is_fallen': is_fallen})
+            for distance, frames, is_fallen, uprightness in results:
+                ia.on_episode_end(distance, frames,
+                                  {'is_fallen': is_fallen, 'uprightness': uprightness})
                 episodes_done += 1
 
             prev_generation = ia.generation

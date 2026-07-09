@@ -26,8 +26,8 @@ class PhysicsWorld:
         la physique numériquement stable (positions en float32).
         """
         self.ground = self.world.CreateStaticBody(
-            position=(0, 0),
-            shapes=b2PolygonShape(box=(1000, 0.5))
+            position=(0, -3.5),
+            shapes=b2PolygonShape(box=(1000, 4))
         )
         self.ground.fixtures[0].friction = 0.8
 

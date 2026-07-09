@@ -88,39 +88,41 @@ def _build_skeleton() -> SkeletonDef:
 
 def _build_skin() -> SkinSpec:
     palette = {
-        'coat': (227, 133, 60),        # orange du pelage
-        'coat_dark': (198, 106, 42),   # orange sombre (ombres, croupe)
-        'cream': (243, 233, 220),      # ventre, poitrail, bout de queue
-        'socks': (61, 46, 40),         # chaussettes sombres
-        'nose': (35, 28, 25),
-        'eye': (30, 24, 20),
-        'ear_inner': (84, 58, 48),
+        "coat": (190, 99, 32),  # orange du pelage (227, 133, 60)
+        "coat_dark": (123, 70, 41),  # orange sombre (ombres, croupe) (198, 106, 42)
+        "cream": (215, 208, 198),  # ventre, poitrail, bout de queue
+        "socks": (45, 34, 27),  # chaussettes sombres
+        "nose": (35, 28, 25),
+        "eye": (30, 24, 20),
+        "ear_inner": (84, 58, 48),
     }
 
     # ----- Torse : polygones dans le repere de l'os 'body' (+x = avant) -----
+    # Silhouette volontairement gonflee (dos plus haut, ventre plus bas) pour
+    # un renard charnu, pas colle aux os.
     torso_outline = [
-        (-0.80, 0.14),   # racine de la queue
-        (-0.72, 0.30),   # croupe
-        (-0.35, 0.36),   # dos arriere
-        (0.15, 0.34),    # dos
-        (0.55, 0.30),    # garrot
-        (0.74, 0.16),    # base du cou
-        (0.76, -0.02),   # poitrail haut
-        (0.64, -0.26),   # poitrail bas
-        (0.28, -0.30),   # dessous de poitrine
-        (-0.10, -0.22),  # ventre
-        (-0.45, -0.20),  # pli du flanc
-        (-0.70, -0.30),  # bas de cuisse
-        (-0.84, -0.06),  # arriere de cuisse
+        (-0.88, 0.16),   # racine de la queue
+        (-0.78, 0.36),   # croupe
+        (-0.38, 0.45),   # dos arriere
+        (0.15, 0.43),    # dos
+        (0.60, 0.37),    # garrot
+        (0.82, 0.19),    # base du cou
+        (0.85, -0.06),   # poitrail haut
+        (0.70, -0.34),   # poitrail bas
+        (0.30, -0.39),   # dessous de poitrine
+        (-0.10, -0.32),  # ventre
+        (-0.48, -0.28),  # pli du flanc
+        (-0.76, -0.36),  # bas de cuisse
+        (-0.92, -0.06),  # arriere de cuisse
     ]
     belly_strip = [
-        (0.64, -0.26),
-        (0.28, -0.30),
-        (-0.10, -0.22),
-        (-0.42, -0.19),
-        (-0.30, -0.08),
-        (0.30, -0.13),
-        (0.60, -0.10),
+        (0.70, -0.34),
+        (0.30, -0.39),
+        (-0.10, -0.32),
+        (-0.46, -0.26),
+        (-0.32, -0.12),
+        (0.32, -0.18),
+        (0.66, -0.13),
     ]
     body_shapes = [
         Shape('coat', points=torso_outline),
@@ -128,50 +130,54 @@ def _build_skin() -> SkinSpec:
     ]
 
     # ----- Tete : repere "museau" (+x vers le nez, +y vers le haut) -----
+    # Tete agrandie (~1.2x), joues plus pleines, oeil plus gros (+ reflet clair).
     head_shapes = [
         Shape('coat', points=[
-            (-0.14, 0.10),   # arriere du crane
-            (0.08, 0.15),    # sommet de la tete
-            (0.28, 0.03),    # haut du museau
-            (0.44, -0.05),   # bout du nez
-            (0.28, -0.13),   # dessous du museau
-            (0.04, -0.17),   # machoire
-            (-0.16, -0.08),  # arriere bas
+            (-0.18, 0.12),   # arriere du crane
+            (0.10, 0.19),    # sommet de la tete
+            (0.34, 0.04),    # haut du museau
+            (0.52, -0.06),   # bout du nez
+            (0.34, -0.16),   # dessous du museau
+            (0.05, -0.21),   # machoire (joue pleine)
+            (-0.20, -0.10),  # arriere bas
         ]),
         Shape('cream', points=[
-            (0.44, -0.05),
-            (0.27, -0.12),
-            (0.02, -0.15),
-            (-0.10, -0.06),
-            (0.06, -0.03),
-            (0.28, -0.03),
+            (0.52, -0.06),
+            (0.33, -0.15),
+            (0.02, -0.18),
+            (-0.12, -0.07),
+            (0.07, -0.04),
+            (0.34, -0.04),
         ], facets=False),
-        Shape('nose', kind='circle', center=(0.43, -0.05), radius=0.028, facets=False),
-        Shape('eye', kind='circle', center=(0.14, 0.02), radius=0.024, facets=False),
+        Shape('nose', kind='circle', center=(0.51, -0.06), radius=0.034, facets=False),
+        Shape('eye', kind='circle', center=(0.17, 0.03), radius=0.034, facets=False),
+        # Petit reflet clair dans l'oeil (le rend vivant).
+        Shape('cream', kind='circle', center=(0.19, 0.055), radius=0.013, facets=False),
     ]
 
     # ----- Oreilles (repere museau, relatives a leur base) -----
-    ear_shape = [(-0.06, 0.0), (0.0, 0.26), (0.09, 0.02)]
-    ear_inner = [(-0.03, 0.02), (0.0, 0.18), (0.05, 0.03)]
+    # Un peu plus grandes pour rester proportionnees a la tete agrandie.
+    ear_shape = [(-0.07, 0.0), (0.0, 0.30), (0.10, 0.02)]
+    ear_inner = [(-0.035, 0.02), (0.0, 0.21), (0.055, 0.03)]
     ears = [
         # Oreille du fond (dessinee en premier, plus sombre via inner seul)
-        EarSpec(base_local=(-0.16, 0.06), points=ear_shape, inner_points=[],
+        EarSpec(base_local=(-0.18, 0.08), points=ear_shape, inner_points=[],
                 color='coat_dark'),
         # Oreille de devant
-        EarSpec(base_local=(-0.04, 0.10), points=ear_shape, inner_points=ear_inner,
+        EarSpec(base_local=(-0.05, 0.12), points=ear_shape, inner_points=ear_inner,
                 color='coat'),
     ]
 
-    # ----- Pattes : capsules suivant les os -----
+    # ----- Pattes : capsules suivant les os (plus charnues, surtout en haut) -----
     legs = {
-        'front_thigh': LegStyle(hw_top=0.11, hw_bottom=0.055, color='coat'),
-        'front_shin': LegStyle(hw_top=0.055, hw_bottom=0.04, color='coat'),
-        'front_ankle': LegStyle(hw_top=0.04, hw_bottom=0.032, color='socks'),
-        'front_foot': LegStyle(hw_top=0.034, hw_bottom=0.03, color='socks'),
-        'back_thigh': LegStyle(hw_top=0.13, hw_bottom=0.06, color='coat'),
-        'back_shin': LegStyle(hw_top=0.06, hw_bottom=0.042, color='coat'),
-        'back_ankle': LegStyle(hw_top=0.042, hw_bottom=0.032, color='socks'),
-        'back_foot': LegStyle(hw_top=0.034, hw_bottom=0.03, color='socks'),
+        'front_thigh': LegStyle(hw_top=0.15, hw_bottom=0.085, color='coat'),
+        'front_shin': LegStyle(hw_top=0.078, hw_bottom=0.052, color='coat'),
+        'front_ankle': LegStyle(hw_top=0.046, hw_bottom=0.036, color='socks'),
+        'front_foot': LegStyle(hw_top=0.038, hw_bottom=0.032, color='socks'),
+        'back_thigh': LegStyle(hw_top=0.17, hw_bottom=0.095, color='coat'),
+        'back_shin': LegStyle(hw_top=0.088, hw_bottom=0.056, color='coat'),
+        'back_ankle': LegStyle(hw_top=0.05, hw_bottom=0.036, color='socks'),
+        'back_foot': LegStyle(hw_top=0.038, hw_bottom=0.032, color='socks'),
     }
     leg_chains = [
         ['back_thigh', 'back_shin', 'back_ankle', 'back_foot'],
@@ -183,11 +189,11 @@ def _build_skin() -> SkinSpec:
     # ----- Queue procedurale (ancree a l'arriere du corps) -----
     tail = TailSpec(
         anchor_bone='body',
-        anchor_local=(-0.78, 0.08),
+        anchor_local=(-0.80, 0.10),
         segment_length=0.15,
         # 180 = droit vers l'arriere ; la queue retombe puis remonte au bout.
         rest_angles_deg=[195, 205, 200, 185, 170, 158],
-        half_widths=[0.07, 0.105, 0.125, 0.12, 0.10, 0.07, 0.025],
+        half_widths=[0.10, 0.15, 0.18, 0.17, 0.14, 0.10, 0.03],
         tip_color='cream',
         tip_ratio=0.30,
         color='coat',
@@ -202,8 +208,8 @@ def _build_skin() -> SkinSpec:
         body_shapes=body_shapes,
         head_shapes=head_shapes,
         neck_bone='neck',
-        neck_hw_base=0.16,
-        neck_hw_top=0.11,
+        neck_hw_base=0.24,
+        neck_hw_top=0.17,
         neck_color='coat',
         legs=legs,
         leg_chains=leg_chains,

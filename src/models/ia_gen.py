@@ -85,6 +85,10 @@ class IAGenetic(IABase):
 
         self.fall_penalty = float(ga_cfg.get('fall_penalty', 100.0))
 
+        # ---- Recompense de stabilite (dos parallele au sol) ----
+        self.use_stability_reward = bool(ga_cfg.get('use_stability_reward', False))
+        self.stability_weight = float(ga_cfg.get('stability_weight', 50.0))
+
         # ---- Population ----
         pop_size = ga_cfg['population_size']
         init_std = ga_cfg['init_std']
@@ -159,6 +163,12 @@ class IAGenetic(IABase):
         fitness = distance * 100.0
         if is_fallen:
             fitness -= self.fall_penalty
+
+        # Bonus de stabilite optionnel : recompense un dos parallele au sol.
+        # uprightness = moyenne de cos(angle du corps) sur l'episode ([-1, 1]).
+        if self.use_stability_reward:
+            uprightness = float(dog_state.get('uprightness', 0.0))
+            fitness += self.stability_weight * uprightness
 
         self.fitness_scores[self.current_individual] = fitness
 

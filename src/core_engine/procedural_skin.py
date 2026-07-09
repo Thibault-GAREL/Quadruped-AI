@@ -366,15 +366,10 @@ class ProceduralSkin:
         for chain in skin.leg_chains:
             self._draw_leg_chain(display, quadruped, chain)
 
-        # 4. Torse (formes attachees a l'os racine).
-        body = quadruped.body
-        for shape in skin.body_shapes:
-            self._draw_shape(display, body, shape)
-
-        # 5. Cou.
+        # 4. Cou.
         self._draw_neck(display, quadruped)
 
-        # 6. Tete et oreilles (oreille du fond avant le crane, l'autre apres).
+        # 5. Tete et oreilles (oreille du fond avant le crane, l'autre apres).
         head = quadruped.bones_by_name.get('head')
         if head is not None:
             head_frame = self._head_frame(head)
@@ -384,3 +379,8 @@ class ProceduralSkin:
                 self._draw_shape(display, head_frame, shape, is_head=True)
             for spec, state in zip(skin.ears[1:], self._ear_state[1:]):
                 self._draw_ear(display, head_frame, spec, state)
+
+        # 6. Torse (dessine en dernier pour passer au premier plan).
+        body = quadruped.body
+        for shape in skin.body_shapes:
+            self._draw_shape(display, body, shape)

@@ -60,6 +60,14 @@ class NeuroGASettings(BaseSettings):
     INIT_STD: float = Field(0.5, gt=0.0)
     FALL_PENALTY: float = Field(100.0, ge=0.0)  # Retranche du fitness si le quadrupede tombe
 
+    # ----- Recompense de stabilite (dos parallele au sol) -----
+    # Si active, on ajoute STABILITY_WEIGHT * moyenne(cos(angle du corps)) sur
+    # l'episode. cos(angle) vaut 1 quand le dos est horizontal, 0 a la verticale,
+    # negatif si retourne. Garder le poids MODESTE devant le gain de distance
+    # (sinon un individu immobile mais bien droit peut battre un marcheur).
+    USE_STABILITY_REWARD: bool = False
+    STABILITY_WEIGHT: float = Field(50.0, ge=0.0)
+
     # ----- Temps adaptatif -----
     ADAPTIVE_TIME: bool = True
     BASE_TIME: int = Field(500, gt=0)
@@ -118,6 +126,8 @@ GA_CONFIG = {
     'tournament_size': SETTINGS.TOURNAMENT_SIZE,
     'init_std': SETTINGS.INIT_STD,
     'fall_penalty': SETTINGS.FALL_PENALTY,
+    'use_stability_reward': SETTINGS.USE_STABILITY_REWARD,
+    'stability_weight': SETTINGS.STABILITY_WEIGHT,
     'adaptive_time': SETTINGS.ADAPTIVE_TIME,
     'base_time': SETTINGS.BASE_TIME,
     'max_time': SETTINGS.MAX_TIME,

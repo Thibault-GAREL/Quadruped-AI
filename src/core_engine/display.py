@@ -69,7 +69,7 @@ class Display:
                     for v in ground_body.fixtures[0].shape.vertices]
         vertices = [(v[0] - self.camera_x * self.PPM, self.height - (v[1] - self.camera_y * self.PPM))
                     for v in vertices]
-        pygame.draw.polygon(self.screen, (143, 191, 64), vertices)
+        pygame.draw.polygon(self.screen, (108, 163, 51), vertices)
 
     def draw_bone(self, bone, color=(255, 255, 255)):
         """Dessine un os (rectangle blanc)"""

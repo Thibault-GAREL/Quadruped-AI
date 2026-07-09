@@ -15,6 +15,7 @@ de calcul economise). Mettre stagnation_frames=0 pour desactiver.
 Module leger : numpy + Box2D uniquement (pas de mlflow/pandas/pygame).
 """
 
+import math
 from typing import Tuple
 
 import numpy as np
@@ -27,8 +28,11 @@ SPAWN_X = 6.0
 
 def run_episode(definition, policy, genome, max_frames: int,
                 stagnation_frames: int = 0,
-                stagnation_min_progress: float = 0.05) -> Tuple[float, int, bool]:
-    """Joue un episode complet et retourne (distance, frames, is_fallen).
+                stagnation_min_progress: float = 0.05) -> Tuple[float, int, bool, float]:
+    """Joue un episode complet et retourne (distance, frames, is_fallen, uprightness).
+
+    uprightness = moyenne de cos(angle du corps) sur l'episode (1 = dos
+    horizontal, 0 = vertical, negatif = retourne). Sert au bonus de stabilite.
 
     Args:
         definition: AnimalDefinition (squelette + spawn_y)
@@ -46,6 +50,7 @@ def run_episode(definition, policy, genome, max_frames: int,
     best_x = start_x
     last_progress_frame = 0
     is_fallen = False
+    uprightness_sum = 0.0
     frame = 0
 
     for frame in range(1, max_frames + 1):
@@ -66,6 +71,9 @@ def run_episode(definition, policy, genome, max_frames: int,
         quad.update()
         world.step(DT)
 
+        # Stabilite : cos de l'angle du corps APRES le pas de physique.
+        uprightness_sum += math.cos(quad.body.body.angle)
+
         # Fin d'episode : chute (comme main.py).
         if quad.is_upside_down():
             is_fallen = True
@@ -81,4 +89,5 @@ def run_episode(definition, policy, genome, max_frames: int,
                 break
 
     distance = quad.body.body.position.x - start_x
-    return float(distance), frame, is_fallen
+    uprightness = uprightness_sum / max(frame, 1)
+    return float(distance), frame, is_fallen, float(uprightness)

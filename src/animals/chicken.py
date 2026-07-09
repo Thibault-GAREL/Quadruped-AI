@@ -100,6 +100,7 @@ def _build_skin() -> SkinSpec:
         'beak': (238, 172, 60),           # bec jaune-orange
         'legs_y': (230, 176, 70),         # pattes jaunes
         'eye': (25, 22, 20),
+        'ear_inner': (180, 40, 34),       # defaut EarSpec (inutilise ici, robustesse)
     }
 
     # ----- Corps dodu (repere de l'os 'body', +x = avant) -----
@@ -129,38 +130,53 @@ def _build_skin() -> SkinSpec:
     ]
 
     # ----- Tete (repere museau : +x vers le bec, +y vers le haut) -----
-    # Tete volontairement grosse par rapport aux pattes : proportions de poule.
+    # Tete nettement agrandie (~1.35x) et arrondie, gros oeil avec reflet et
+    # bec plus marque : le tout donne un regard bien plus vivant.
     head_shapes = [
-        Shape('plumage', points=[
-            (-0.13, 0.02),
-            (-0.11, 0.10),
-            (-0.04, 0.14),
-            (0.06, 0.13),
-            (0.13, 0.06),
-            (0.13, -0.06),
-            (0.06, -0.14),
-            (-0.05, -0.14),
-            (-0.12, -0.07),
-        ]),
-        Shape('beak', points=[
-            (0.09, 0.05),
-            (0.28, 0.005),
-            (0.09, -0.05),
-        ], facets=False),
-        Shape('eye', kind='circle', center=(0.025, 0.035), radius=0.025, facets=False),
+        Shape(
+            "beak",
+            points=[
+                (0.13, 0.075),
+                (0.37, 0.005),
+                (0.13, -0.075),
+            ],
+            facets=False,
+        ),
+        Shape(
+            "plumage",
+            points=[
+                (-0.18, 0.03),
+                (-0.15, 0.14),
+                (-0.05, 0.20),
+                (0.08, 0.19),
+                (0.18, 0.09),
+                (0.19, -0.03),
+                (0.14, -0.15),
+                (0.02, -0.21),
+                (-0.10, -0.19),
+                (-0.17, -0.09),
+            ],
+        ),
+        # Zone claire autour de l'oeil pour l'agrandir visuellement.
+        Shape("eye", kind="circle", center=(0.05, 0.06), radius=0.052, facets=False),
+        # Reflet clair : donne du vivant au regard.
+        Shape(
+            "plumage", kind="circle", center=(0.075, 0.09), radius=0.02, facets=False
+        ),
     ]
 
     # ----- Crete et barbillon : ressorts (EarSpec est generique) -----
+    # Repositionnes/agrandis pour la tete plus grosse.
     comb = EarSpec(
-        base_local=(-0.02, 0.12),
-        points=[(-0.09, -0.01), (-0.06, 0.10), (-0.01, 0.035),
-                (0.02, 0.125), (0.055, 0.035), (0.09, 0.09), (0.10, -0.02)],
+        base_local=(-0.02, 0.17),
+        points=[(-0.11, -0.01), (-0.07, 0.13), (-0.01, 0.05),
+                (0.03, 0.16), (0.07, 0.05), (0.11, 0.12), (0.13, -0.02)],
         color='comb',
         stiffness=70.0, damping=8.0, react_gain=0.05, max_deflection=0.45,
     )
     wattle = EarSpec(
-        base_local=(0.06, -0.11),
-        points=[(-0.04, 0.01), (0.0, -0.125), (0.045, 0.0)],
+        base_local=(0.09, -0.11),
+        points=[(-0.05, -0.07), (0.0, -0.17), (0.06, 0.0)],
         color='comb',
         stiffness=40.0, damping=6.0, react_gain=0.09, max_deflection=0.7,
     )
@@ -171,9 +187,9 @@ def _build_skin() -> SkinSpec:
     def leg_styles(side):
         return {
             f'{side}_thigh': LegStyle(hw_top=0.10, hw_bottom=0.06, color='plumage'),
-            f'{side}_shin': LegStyle(hw_top=0.065, hw_bottom=0.045, color='plumage'),
-            f'{side}_shank': LegStyle(hw_top=0.024, hw_bottom=0.018, color='legs_y'),
-            f'{side}_foot': LegStyle(hw_top=0.02, hw_bottom=0.016, color='legs_y'),
+            f'{side}_shin': LegStyle(hw_top=0.165, hw_bottom=0.065, color='plumage'),
+            f'{side}_shank': LegStyle(hw_top=0.05, hw_bottom=0.03, color='legs_y'),
+            f'{side}_foot': LegStyle(hw_top=0.025, hw_bottom=0.02, color='legs_y'),
         }
 
     legs = {**leg_styles('right'), **leg_styles('left')}
@@ -201,8 +217,8 @@ def _build_skin() -> SkinSpec:
         body_shapes=body_shapes,
         head_shapes=head_shapes,
         neck_bone='neck',
-        neck_hw_base=0.11,
-        neck_hw_top=0.07,
+        neck_hw_base=0.14,
+        neck_hw_top=0.10,
         neck_color='plumage',
         legs=legs,
         leg_chains=leg_chains,
