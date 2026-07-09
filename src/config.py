@@ -10,7 +10,7 @@
 ANIMAL = "chicken"  # "fox" (renard, quadrupède) ou "chicken" (poule, bipède)
 
 # Mode de contrôle
-HUMAN_CONTROL = False  # True = contrôle humain, False = contrôle IA
+HUMAN_CONTROL = True  # True = contrôle humain, False = contrôle IA
 
 # Affichage
 DISPLAY_ENABLED = True  # True = afficher l'écran, False = mode rapide sans affichage

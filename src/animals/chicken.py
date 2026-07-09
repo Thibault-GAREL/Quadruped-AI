@@ -41,6 +41,11 @@ HIP_X = 0.0      # x d'attache des pattes sur le corps (issu de la pose d'equili
 # ce basculement (la tete surtout, plus eloignee du centre).
 NECK_DENSITY = 0.05
 HEAD_DENSITY = 0.15
+# Orientation figee du cou et de la tete. On les fait naitre DEJA a leur angle
+# final et on fige leurs joints a 0 (voir _build_skeleton) : ainsi ils ne
+# pivotent plus au demarrage pour rejoindre leur pose (corps a angle 0).
+NECK_ANGLE = math.pi * 0.889               # cou (orientation absolue)
+HEAD_ANGLE = NECK_ANGLE + math.pi * 0.58   # tete = cou + inclinaison du bec
 
 
 def _leg_bones(side: str, hip_x: float):
@@ -88,21 +93,22 @@ def _build_skeleton() -> SkeletonDef:
         BoneDef('body', 0.0, 0.0, BODY_LEN, WIDTH_BONE, DENSITY_BACK, angle=0),
         *_leg_bones('right', HIP_X),
         *_leg_bones('left', HIP_X),
-        BoneDef('neck', 0.47, 0.24, WIDTH_BONE, NECK_LEN, NECK_DENSITY, angle=0),
-        BoneDef('head', 0.52, 0.49, WIDTH_BONE, HEAD_LEN, HEAD_DENSITY, angle=0),
+        BoneDef('neck', 0.47, 0.24, WIDTH_BONE, NECK_LEN, NECK_DENSITY, angle=NECK_ANGLE),
+        BoneDef('head', 0.52, 0.49, WIDTH_BONE, HEAD_LEN, HEAD_DENSITY, angle=HEAD_ANGLE),
     ]
 
     # Les 8 muscles actionnes d'abord (patte droite puis gauche).
     muscles = [
         *_leg_muscles('right', HIP_X),
         *_leg_muscles('left', HIP_X),
-        # Cou quasi vertical et tete bec vers l'avant : joints figes.
+        # Cou et tete figes a 0 : ils gardent EXACTEMENT leur orientation de
+        # naissance (NECK_ANGLE/HEAD_ANGLE), donc aucune rotation au demarrage.
         MuscleDef('neck_joint', 'body', 'neck',
                   (BODY_LEN / 2 + MARGE, WIDTH_BONE), (0, NECK_LEN / 2),
-                  math.pi * 0.889, math.pi * 0.889, max_torque=40),
+                  0, 0, max_torque=40),
         MuscleDef('head_joint', 'neck', 'head',
                   (WIDTH_BONE, -(NECK_LEN / 2 + MARGE)), (WIDTH_BONE, -WIDTH_BONE),
-                  math.pi * 0.58, math.pi * 0.58, max_torque=40),
+                  0, 0, max_torque=40),
     ]
 
     return SkeletonDef(bones=bones, muscles=muscles, root='body',
