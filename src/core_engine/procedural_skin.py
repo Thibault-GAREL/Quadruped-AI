@@ -380,12 +380,31 @@ class ProceduralSkin:
     # ================= DESSIN COMPLET =================
 
     def _draw_leg_chain(self, display, quadruped, chain, darken=1.0, offset=(0.0, 0.0)):
+        # Collecte les extremites de chaque os de la chaine.
+        segs = []  # (top, bottom, style, bone_name)
         for bone_name in chain:
             style = self.skin.legs.get(bone_name)
             bone = quadruped.bones_by_name.get(bone_name)
             if style is None or bone is None:
                 continue
             top, bottom = self._bone_ends(bone)
+            segs.append((top, bottom, style, bone_name))
+
+        # 1. Liaisons entre os consecutifs (dessous) : relie le bas du parent a
+        #    l'extremite la PLUS PROCHE de l'os enfant. Indispensable quand un os
+        #    change d'orientation (le pied est horizontal alors que le tibia est
+        #    vertical) : sans ca un trou apparait a l'articulation.
+        for (_, bottom_p, style_p, _), (top_c, bottom_c, style_c, name_c) in zip(segs, segs[1:]):
+            near = top_c if (self._dist2(bottom_p, top_c) <= self._dist2(bottom_p, bottom_c)) else bottom_c
+            hw = max(style_p.hw_bottom, style_c.hw_top)
+            color = _shade(self.skin.palette[style_c.color], darken)
+            self._draw_capsule(
+                display, bottom_p, near, hw, hw, color, name_c,
+                facets=False, world_offset=offset,
+            )
+
+        # 2. Os par-dessus.
+        for top, bottom, style, bone_name in segs:
             color = _shade(self.skin.palette[style.color], darken)
             self._draw_capsule(
                 display,
@@ -397,6 +416,10 @@ class ProceduralSkin:
                 bone_name,
                 world_offset=offset,
             )
+
+    @staticmethod
+    def _dist2(a, b):
+        return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
 
     def _draw_neck(self, display, quadruped):
         neck = quadruped.bones_by_name.get(self.skin.neck_bone)
@@ -433,7 +456,8 @@ class ProceduralSkin:
         # 2. Queue.
         self._draw_tail(display)
 
-        # 3. Pattes de devant.
+        # 3. Pattes dessinees DERRIERE le torse (pattes arriere : sortent de
+        #    sous la croupe).
         for chain in skin.leg_chains:
             self._draw_leg_chain(display, quadruped, chain)
 
@@ -451,7 +475,12 @@ class ProceduralSkin:
             for spec, state in zip(skin.ears[1:], self._ear_state[1:]):
                 self._draw_ear(display, head_frame, spec, state)
 
-        # 6. Torse (dessine en dernier pour passer au premier plan).
+        # 6. Torse (dessine apres le cou/tete pour passer au premier plan).
         body = quadruped.body
         for shape in skin.body_shapes:
             self._draw_shape(display, body, shape)
+
+        # 7. Pattes dessinees DEVANT le torse (pattes avant : leur cuisse passe
+        #    devant le ventre, sinon le ventre clair la mange).
+        for chain in skin.front_leg_chains:
+            self._draw_leg_chain(display, quadruped, chain)

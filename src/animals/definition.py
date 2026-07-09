@@ -135,10 +135,15 @@ class SkinSpec:
 
     # Pattes : capsules suivant les os, cle = nom de l'os.
     legs: Dict[str, LegStyle] = field(default_factory=dict)
-    # Chaines de pattes de devant (liste de listes de noms d'os).
+    # Chaines de pattes dessinees AVANT le torse (elles passent derriere le
+    # corps : typiquement les pattes arriere qui sortent de sous la croupe).
     leg_chains: List[List[str]] = field(default_factory=list)
+    # Chaines dessinees APRES le torse (elles passent DEVANT le corps :
+    # typiquement les pattes avant, pour que le haut de la cuisse ne soit pas
+    # mange par le ventre). Vide par defaut.
+    front_leg_chains: List[List[str]] = field(default_factory=list)
     # Chaines dessinees au fond, assombries et decalees. Un quadrupede en vue
-    # de profil duplique ses 2 pattes physiques (leg_chains == far_leg_chains),
+    # de profil duplique ses 2 pattes physiques (far == arriere + avant),
     # un bipede met sa patte gauche au fond et sa droite devant.
     far_leg_chains: List[List[str]] = field(default_factory=list)
     far_leg_darken: float = 0.68         # facteur de couleur des pattes du fond

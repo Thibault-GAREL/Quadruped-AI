@@ -95,6 +95,7 @@ def _build_skin() -> SkinSpec:
         "nose": (35, 28, 25),
         "eye": (30, 24, 20),
         "ear_inner": (84, 58, 48),
+        "sun": (222, 116, 37),  # eclairage soleil sur le dessus du dos/tete
     }
 
     # ----- Torse : polygones dans le repere de l'os 'body' (+x = avant) -----
@@ -124,8 +125,21 @@ def _build_skin() -> SkinSpec:
         (0.32, -0.18),
         (0.66, -0.13),
     ]
+    # Bande d'eclairage solaire : suit le haut du dos, teinte plus claire.
+    sun_strip = [
+        (-0.80, 0.30),   # croupe
+        (-0.38, 0.42),   # dos arriere (haut)
+        (0.15, 0.40),    # dos
+        (0.58, 0.34),    # garrot
+        (0.78, 0.17),    # vers la base du cou
+        (0.58, 0.15),    # redescend (bord bas de la bande)
+        (0.15, 0.23),
+        (-0.38, 0.25),
+        (-0.74, 0.17),
+    ]
     body_shapes = [
         Shape('coat', points=torso_outline),
+        Shape('sun', points=sun_strip),      # highlight du dessus (soleil)
         Shape('cream', points=belly_strip),
     ]
 
@@ -161,10 +175,10 @@ def _build_skin() -> SkinSpec:
     ear_inner = [(-0.035, 0.02), (0.0, 0.21), (0.055, 0.03)]
     ears = [
         # Oreille du fond (dessinee en premier, plus sombre via inner seul)
-        EarSpec(base_local=(-0.18, 0.08), points=ear_shape, inner_points=[],
+        EarSpec(base_local=(0.005, 0.05), points=ear_shape, inner_points=[],
                 color='coat_dark'),
         # Oreille de devant
-        EarSpec(base_local=(-0.05, 0.12), points=ear_shape, inner_points=ear_inner,
+        EarSpec(base_local=(-0.1, 0.12), points=ear_shape, inner_points=ear_inner,
                 color='coat'),
     ]
 
@@ -179,12 +193,14 @@ def _build_skin() -> SkinSpec:
         'back_ankle': LegStyle(hw_top=0.05, hw_bottom=0.036, color='socks'),
         'back_foot': LegStyle(hw_top=0.038, hw_bottom=0.032, color='socks'),
     }
-    leg_chains = [
-        ['back_thigh', 'back_shin', 'back_ankle', 'back_foot'],
-        ['front_thigh', 'front_shin', 'front_ankle', 'front_foot'],
-    ]
-    # Les 2 pattes physiques sont dupliquees au fond : effet 4 pattes.
-    far_leg_chains = leg_chains
+    back_chain = ['back_thigh', 'back_shin', 'back_ankle', 'back_foot']
+    front_chain = ['front_thigh', 'front_shin', 'front_ankle', 'front_foot']
+    # Patte arriere DERRIERE le torse (sort de sous la croupe), patte avant
+    # DEVANT le torse (sa cuisse passe devant le ventre, sinon le blanc la mange).
+    leg_chains = [back_chain]
+    front_leg_chains = [front_chain]
+    # Les 2 pattes physiques sont aussi dupliquees au fond : effet 4 pattes.
+    far_leg_chains = [back_chain, front_chain]
 
     # ----- Queue procedurale (ancree a l'arriere du corps) -----
     tail = TailSpec(
@@ -213,6 +229,7 @@ def _build_skin() -> SkinSpec:
         neck_color='coat',
         legs=legs,
         leg_chains=leg_chains,
+        front_leg_chains=front_leg_chains,
         far_leg_chains=far_leg_chains,
         far_leg_darken=0.68,
         far_leg_offset=(0.07, 0.0),
