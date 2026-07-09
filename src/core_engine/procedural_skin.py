@@ -51,8 +51,8 @@ class ProceduralSkin:
     def __init__(self, skin):
         self.skin = skin
         # Etat de la queue (chaine de noeuds) et des oreilles (ressorts).
-        self._tail_nodes = None      # [[x, y], ...] positions courantes
-        self._tail_prev = None       # positions au pas precedent (verlet)
+        self._tail_nodes = None  # [[x, y], ...] positions courantes
+        self._tail_prev = None  # positions au pas precedent (verlet)
         self._ear_state = [[0.0, 0.0] for _ in skin.ears]  # [angle, vitesse]
 
     # ================= GEOMETRIE =================
@@ -78,8 +78,10 @@ class ProceduralSkin:
     def _local_to_world(bone, points):
         """Transforme des points du repere local de l'os vers le monde."""
         (cx, cy), cos_a, sin_a = ProceduralSkin._bone_frame(bone)
-        return [(cx + px * cos_a - py * sin_a, cy + px * sin_a + py * cos_a)
-                for px, py in points]
+        return [
+            (cx + px * cos_a - py * sin_a, cy + px * sin_a + py * cos_a)
+            for px, py in points
+        ]
 
     @staticmethod
     def _head_frame(head_bone):
@@ -94,8 +96,10 @@ class ProceduralSkin:
     @staticmethod
     def _muzzle_to_world(origin, f, u, points):
         ox, oy = origin
-        return [(ox + px * f[0] + py * u[0], oy + px * f[1] + py * u[1])
-                for px, py in points]
+        return [
+            (ox + px * f[0] + py * u[0], oy + px * f[1] + py * u[1])
+            for px, py in points
+        ]
 
     # ================= DESSIN BAS NIVEAU =================
 
@@ -116,10 +120,22 @@ class ProceduralSkin:
         jitter = self.skin.facet_jitter
         for i in range(len(pts)):
             tri = [(cx, cy), pts[i], pts[(i + 1) % len(pts)]]
-            pygame.draw.polygon(display.screen, _shade(color, _facet_factor(key, i, jitter)), tri)
+            pygame.draw.polygon(
+                display.screen, _shade(color, _facet_factor(key, i, jitter)), tri
+            )
 
-    def _draw_capsule(self, display, p_top, p_bottom, hw_top, hw_bottom,
-                      color, key, facets=True, world_offset=(0.0, 0.0)):
+    def _draw_capsule(
+        self,
+        display,
+        p_top,
+        p_bottom,
+        hw_top,
+        hw_bottom,
+        color,
+        key,
+        facets=True,
+        world_offset=(0.0, 0.0),
+    ):
         """Segment effile entre deux points, avec bouts arrondis."""
         ox, oy = world_offset
         p_top = (p_top[0] + ox, p_top[1] + oy)
@@ -140,31 +156,48 @@ class ProceduralSkin:
         self._draw_polygon(display, quad, color, key, facets=facets)
         # Bouts arrondis : remplit les articulations, aucune couture visible.
         ppm = display.PPM
-        pygame.draw.circle(display.screen, color, display.to_screen(p_top),
-                           max(1, int(hw_top * ppm)))
-        pygame.draw.circle(display.screen, color, display.to_screen(p_bottom),
-                           max(1, int(hw_bottom * ppm)))
+        pygame.draw.circle(
+            display.screen, color, display.to_screen(p_top), max(1, int(hw_top * ppm))
+        )
+        pygame.draw.circle(
+            display.screen,
+            color,
+            display.to_screen(p_bottom),
+            max(1, int(hw_bottom * ppm)),
+        )
 
     def _draw_shape(self, display, bone_or_frame, shape, is_head=False):
         """Dessine une Shape locale (polygone ou cercle) attachee a un os."""
         color = self.skin.palette[shape.color]
         if is_head:
             origin, f, u = bone_or_frame
-            if shape.kind == 'circle':
+            if shape.kind == "circle":
                 center = self._muzzle_to_world(origin, f, u, [shape.center])[0]
-                pygame.draw.circle(display.screen, color, display.to_screen(center),
-                                   max(1, int(shape.radius * display.PPM)))
+                pygame.draw.circle(
+                    display.screen,
+                    color,
+                    display.to_screen(center),
+                    max(1, int(shape.radius * display.PPM)),
+                )
             else:
                 pts = self._muzzle_to_world(origin, f, u, shape.points)
-                self._draw_polygon(display, pts, color, shape.color, facets=shape.facets)
+                self._draw_polygon(
+                    display, pts, color, shape.color, facets=shape.facets
+                )
         else:
-            if shape.kind == 'circle':
+            if shape.kind == "circle":
                 center = self._local_to_world(bone_or_frame, [shape.center])[0]
-                pygame.draw.circle(display.screen, color, display.to_screen(center),
-                                   max(1, int(shape.radius * display.PPM)))
+                pygame.draw.circle(
+                    display.screen,
+                    color,
+                    display.to_screen(center),
+                    max(1, int(shape.radius * display.PPM)),
+                )
             else:
                 pts = self._local_to_world(bone_or_frame, shape.points)
-                self._draw_polygon(display, pts, color, shape.color, facets=shape.facets)
+                self._draw_polygon(
+                    display, pts, color, shape.color, facets=shape.facets
+                )
 
     # ================= QUEUE PROCEDURALE =================
 
@@ -195,9 +228,13 @@ class ProceduralSkin:
         anchor, rest = self._tail_anchor_and_rest(quadruped)
 
         # Premiere frame, ou teleportation (reset d'episode) : pose de repos.
-        if self._tail_nodes is None or \
-                math.hypot(anchor[0] - self._tail_nodes[0][0],
-                           anchor[1] - self._tail_nodes[0][1]) > 0.8:
+        if (
+            self._tail_nodes is None
+            or math.hypot(
+                anchor[0] - self._tail_nodes[0][0], anchor[1] - self._tail_nodes[0][1]
+            )
+            > 0.8
+        ):
             self._reset_tail(rest)
             return
 
@@ -252,18 +289,28 @@ class ProceduralSkin:
             quad = [
                 (nodes[i][0] + perps[i][0] * hw_a, nodes[i][1] + perps[i][1] * hw_a),
                 (nodes[i][0] - perps[i][0] * hw_a, nodes[i][1] - perps[i][1] * hw_a),
-                (nodes[i + 1][0] - perps[i + 1][0] * hw_b, nodes[i + 1][1] - perps[i + 1][1] * hw_b),
-                (nodes[i + 1][0] + perps[i + 1][0] * hw_b, nodes[i + 1][1] + perps[i + 1][1] * hw_b),
+                (
+                    nodes[i + 1][0] - perps[i + 1][0] * hw_b,
+                    nodes[i + 1][1] - perps[i + 1][1] * hw_b,
+                ),
+                (
+                    nodes[i + 1][0] + perps[i + 1][0] * hw_b,
+                    nodes[i + 1][1] + perps[i + 1][1] * hw_b,
+                ),
             ]
             pts = self._to_screen(display, quad)
             pygame.draw.polygon(display.screen, color, pts)
             # Deux facettes par segment.
-            pygame.draw.polygon(display.screen,
-                                _shade(color, _facet_factor('tail', i * 2, jitter)),
-                                [pts[0], pts[1], pts[2]])
-            pygame.draw.polygon(display.screen,
-                                _shade(color, _facet_factor('tail', i * 2 + 1, jitter)),
-                                [pts[0], pts[2], pts[3]])
+            pygame.draw.polygon(
+                display.screen,
+                _shade(color, _facet_factor("tail", i * 2, jitter)),
+                [pts[0], pts[1], pts[2]],
+            )
+            pygame.draw.polygon(
+                display.screen,
+                _shade(color, _facet_factor("tail", i * 2 + 1, jitter)),
+                [pts[0], pts[2], pts[3]],
+            )
 
     def get_tail_virtual_bones(self):
         """Os virtuels de la queue pour l'overlay texture legacy (3 segments)."""
@@ -280,9 +327,9 @@ class ProceduralSkin:
             return VirtualBone((cx, cy), math.atan2(dy, dx) - math.pi / 2)
 
         return {
-            'tail_bottom': vbone(0, 2),
-            'tail_mid': vbone(2, 4),
-            'tail_high': vbone(4, 6),
+            "tail_bottom": vbone(0, 2),
+            "tail_mid": vbone(2, 4),
+            "tail_high": vbone(4, 6),
         }
 
     # ================= OREILLES A RESSORT =================
@@ -291,13 +338,14 @@ class ProceduralSkin:
         """Ressort amorti : les oreilles reagissent a la vitesse angulaire de la tete."""
         if not self.skin.ears:
             return
-        head = quadruped.bones_by_name.get('head')
+        head = quadruped.bones_by_name.get("head")
         if head is None:
             return
         omega = head.body.angularVelocity
         for spec, state in zip(self.skin.ears, self._ear_state):
-            target = max(-spec.max_deflection,
-                         min(spec.max_deflection, -omega * spec.react_gain))
+            target = max(
+                -spec.max_deflection, min(spec.max_deflection, -omega * spec.react_gain)
+            )
             acc = spec.stiffness * (target - state[0]) - spec.damping * state[1]
             state[1] += acc * dt
             state[0] += state[1] * dt
@@ -310,16 +358,24 @@ class ProceduralSkin:
 
         def deflect(points):
             # Rotation des points de l'oreille autour de sa base (ressort).
-            return [(bx + px * cos_o - py * sin_o, by + px * sin_o + py * cos_o)
-                    for px, py in points]
+            return [
+                (bx + px * cos_o - py * sin_o, by + px * sin_o + py * cos_o)
+                for px, py in points
+            ]
 
         pts = self._muzzle_to_world(origin, f, u, deflect(spec.points))
-        self._draw_polygon(display, pts, self.skin.palette[spec.color],
-                           spec.color + '_ear')
+        self._draw_polygon(
+            display, pts, self.skin.palette[spec.color], spec.color + "_ear"
+        )
         if spec.inner_points:
             inner = self._muzzle_to_world(origin, f, u, deflect(spec.inner_points))
-            self._draw_polygon(display, inner, self.skin.palette[spec.inner_color],
-                               spec.inner_color, facets=False)
+            self._draw_polygon(
+                display,
+                inner,
+                self.skin.palette[spec.inner_color],
+                spec.inner_color,
+                facets=False,
+            )
 
     # ================= DESSIN COMPLET =================
 
@@ -331,8 +387,16 @@ class ProceduralSkin:
                 continue
             top, bottom = self._bone_ends(bone)
             color = _shade(self.skin.palette[style.color], darken)
-            self._draw_capsule(display, top, bottom, style.hw_top, style.hw_bottom,
-                               color, bone_name, world_offset=offset)
+            self._draw_capsule(
+                display,
+                top,
+                bottom,
+                style.hw_top,
+                style.hw_bottom,
+                color,
+                bone_name,
+                world_offset=offset,
+            )
 
     def _draw_neck(self, display, quadruped):
         neck = quadruped.bones_by_name.get(self.skin.neck_bone)
@@ -340,9 +404,15 @@ class ProceduralSkin:
             return
         top, bottom = self._bone_ends(neck)
         # top = cote corps, bottom = cote tete (cf. squelette du renard).
-        self._draw_capsule(display, top, bottom, self.skin.neck_hw_base,
-                           self.skin.neck_hw_top,
-                           self.skin.palette[self.skin.neck_color], 'neck')
+        self._draw_capsule(
+            display,
+            top,
+            bottom,
+            self.skin.neck_hw_base,
+            self.skin.neck_hw_top,
+            self.skin.palette[self.skin.neck_color],
+            "neck",
+        )
 
     def update(self, quadruped, dt=1.0 / 60.0):
         """Met a jour les animations procedurales (queue, oreilles)."""
@@ -356,8 +426,9 @@ class ProceduralSkin:
 
         # 1. Pattes du fond (plus sombres, legerement decalees).
         for chain in skin.far_leg_chains:
-            self._draw_leg_chain(display, quadruped, chain,
-                                 darken=skin.far_leg_darken, offset=far_off)
+            self._draw_leg_chain(
+                display, quadruped, chain, darken=skin.far_leg_darken, offset=far_off
+            )
 
         # 2. Queue.
         self._draw_tail(display)
@@ -370,7 +441,7 @@ class ProceduralSkin:
         self._draw_neck(display, quadruped)
 
         # 5. Tete et oreilles (oreille du fond avant le crane, l'autre apres).
-        head = quadruped.bones_by_name.get('head')
+        head = quadruped.bones_by_name.get("head")
         if head is not None:
             head_frame = self._head_frame(head)
             if skin.ears:

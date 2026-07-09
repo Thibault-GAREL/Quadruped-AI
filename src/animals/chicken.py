@@ -104,25 +104,26 @@ def _build_skin() -> SkinSpec:
     }
 
     # ----- Corps dodu (repere de l'os 'body', +x = avant) -----
+    # Legerement agrandi (~8%) autour du centre de l'os body.
     body_outline = [
-        (-0.40, 0.20),   # naissance de la queue
-        (-0.15, 0.28),   # dos
-        (0.15, 0.27),
-        (0.38, 0.18),    # epaule vers le cou
-        (0.47, 0.03),    # jabot haut
-        (0.43, -0.17),   # poitrail
-        (0.22, -0.29),   # dessous avant
-        (-0.10, -0.30),  # ventre
-        (-0.33, -0.21),  # arriere ventre
-        (-0.45, -0.04),  # dessous de la queue
+        (-0.43, 0.22),   # naissance de la queue
+        (-0.16, 0.30),   # dos
+        (0.16, 0.29),
+        (0.41, 0.19),    # epaule vers le cou
+        (0.51, 0.03),    # jabot haut
+        (0.46, -0.18),   # poitrail
+        (0.24, -0.31),   # dessous avant
+        (-0.11, -0.32),  # ventre
+        (-0.36, -0.23),  # arriere ventre
+        (-0.49, -0.04),  # dessous de la queue
     ]
     wing = [
-        (0.14, 0.14),
-        (0.26, 0.02),
-        (0.12, -0.13),
-        (-0.14, -0.14),
-        (-0.36, -0.05),
-        (-0.14, 0.11),
+        (0.15, 0.15),
+        (0.28, 0.02),
+        (0.13, -0.14),
+        (-0.15, -0.15),
+        (-0.39, -0.05),
+        (-0.15, 0.12),
     ]
     body_shapes = [
         Shape('plumage', points=body_outline),
