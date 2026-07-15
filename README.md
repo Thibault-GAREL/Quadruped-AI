@@ -259,4 +259,6 @@ python progress.py
 ## 📖 Inspiration / Sources
 I code it without any help 😆 !
 
+A big thanks to [Robin Konig](https://github.com/RobinKoenig69) for the compute for a big part of the fox and chicken training !
+
 Code created by me 😎, Thibault GAREL - [Github](https://github.com/Thibault-GAREL)
