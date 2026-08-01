@@ -14,12 +14,6 @@
   <img src="assets/logo.png" alt="logo">
 </p>
 
-
-<p align="center">
-  <img src="assets/GA-Fox-105m.gif" alt="GA Fox">
-  <img src="assets/GA-Chicken-41m.gif" alt="GA Chicken">
-</p>
-
 ## 📝 Project Description
 This project is a playground to understand how to use **Box2D** with **Pygame**, and to teach animals how to walk from scratch. 🦊🐔
 
@@ -63,8 +57,8 @@ Project for the futur :
 
 The fox and the chicken, both drawn **100% procedurally** from their Box2D skeleton :
 <p align="center">
-  <img src="assets/render_fox.png" alt="Procedural fox" width="400">
-  <img src="assets/render_chicken.png" alt="Procedural chicken" width="400">
+  <img src="assets/render_fox.png" alt="Procedural fox" width="80%">
+  <img src="assets/render_chicken.png" alt="Procedural chicken" width="80%">
 </p>
 
 We can control an animal and the view (you can clearly see the parallax and the different modes, procedural / skeleton / overlay) :
@@ -77,8 +71,49 @@ Here is the algorithm that selects the best choreography :
   <img src="assets/Gif-select-choregraphy.gif" alt="Example Outputs : Select best choreography">
 </p>
 
+### 🏆 Trained walkers (neuro-evolution)
+
+Here is the **best champion of each species**, both trained from scratch (random weights, no prior knowledge) on a **32 vCPU Runpod CPU pod** with the exact same budget : 500 generations of 128 individuals, so 64 000 episodes per run.
+
+#### Genetic Algorithm :
+<p align="center">
+  <img src="assets/GA-Fox-105m.gif" alt="GA Fox, 105 m" width="80%">
+</p>
+<p align="center">
+  <i>The fox walks <b>105 m</b>.</i>
+</p>
+
+<p align="center">
+  <img src="assets/GA-Chicken-41m.gif" alt="GA Chicken, 41 m" width="80%">
+</p>
+<p align="center">
+  <i>The chicken <b>41 m</b>.</i>
+</p>
+
+
+The **fox** converges on a genuine four-legged gait, keeps its back roughly horizontal and covers **105 m** before the episode ends. The **chicken** has a much harder job (two legs, a high center of mass, and a body that wants to tip forward), so it settles on a fast hopping gait and reaches **41 m**. The biped also needs an extra **stability reward** in its fitness, otherwise the population converges on animals that fall immediately.
+
+### 📊 Training runs comparison
+
+Every trained model is logged here, so any new algorithm can be compared to the previous ones on the very same task :
+
+| Algorithm | Animal | Network | Training budget | Best fitness | Distance | Gain vs gen 0 | Compute time |
+|---|---|---|---|---|---|---|---|
+| **Neuro-GA** | 🦊 Fox | 23 → 16 → 8 | 500 gen x 128 | **8079** | **105 m** | x14.8 | 3 min 41 s |
+| **Neuro-GA** | 🐔 Chicken | 19 → 16 → 6 | 500 gen x 128 | **1573** | **41 m** | x7.8 | 5 min 48 s |
+| **PPO** | 🦊 Fox | to do | | | | | |
+| **PPO** | 🐔 Chicken | to do | | | | | |
+| **NEAT** | 🦊 Fox | to do | | | | | |
+| **SAC** | 🦊 Fox | to do | | | | | |
+
+Both GA rows share the same hardware, the same episode budget and the same fitness definition, which makes them directly comparable. **Gain vs gen 0** is the ratio between the final best fitness and the best fitness of the very first random generation, so it measures what the algorithm actually learned (and not how good the lucky starting population was).
+
 ### 📝 Notes & Observations
   🦊 The quadruped fox learns to walk much faster than the chicken (standing on two legs is hard, the biped falls a lot in early generations).
+
+  🐔 The chicken **plateaus early** : its best fitness (1573) is reached at generation 119 and never improves during the 381 remaining generations, while the fox keeps progressing until generation 420.
+
+  ⏱️ That plateau is partly **mechanical** : the episode length grows with the best fitness (`base_time` + ratio to `reward_threshold_for_max_time`), so the chicken stays capped at 971 frames while the fox unlocks the full 2000. A lower threshold would give the biped more room to improve.
 
   🎨 The procedural skin holds up even in extreme poses (no seams tear apart, unlike the old glued images).
 
@@ -111,9 +146,9 @@ A tiny MLP whose weights are **evolved by a genetic algorithm** (no backpropagat
 ![Neuro-GA architecture](assets/architecture_neuro_ga.svg)
 
 **Key details :**
-- Input = 23 (7 base features + 2 x 8 proprioception)
-- Hidden = 16 (tanh), Output = 8 muscle activations (tanh)
-- Fitness = forward distance x 100 (fall penalty)
+- Input = 7 base features + 2 per actuated muscle (proprioception), so **23 for the fox** and **19 for the chicken**
+- Hidden = 16 (tanh), Output = one activation per muscle (tanh), **8 for the fox** and **6 for the chicken**
+- Fitness = forward distance x 100 (fall penalty), plus a stability bonus for the biped
 
 ### PPO (`IA_TYPE = "ppo"`)
 
