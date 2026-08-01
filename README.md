@@ -15,6 +15,11 @@
 </p>
 
 
+<p align="center">
+  <img src="assets/GA-Fox-105m.gif" alt="GA Fox">
+  <img src="assets/GA-Chicken-41m.gif" alt="GA Chicken">
+</p>
+
 ## 📝 Project Description
 This project is a playground to understand how to use **Box2D** with **Pygame**, and to teach animals how to walk from scratch. 🦊🐔
 

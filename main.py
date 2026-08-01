@@ -91,22 +91,22 @@ def main():
     parallax.add_layer("assets/tree5.png", depth=0.5, x_position=-6, y_position=0, repeat=True, repeat_spacing=(4, 10))
 
     parallax.add_layer("assets/bush.png", depth=0.8, x_position=-2, y_position=0.35, repeat=True, repeat_spacing=(4, 10),
-                       scale=0.25)
+                       scale=0.16)
     parallax.add_layer("assets/bush2.png", depth=0.83, x_position=-5, y_position=0.35, repeat=True, repeat_spacing=(4, 10),
-                       scale=0.15)
+                       scale=0.10)
     parallax.add_layer("assets/bush3.png", depth=0.84, x_position=-7, y_position=0.34, repeat=True, repeat_spacing=(4, 10),
-                       scale=0.2)
+                       scale=0.13)
     parallax.add_layer("assets/bush4.png", depth=0.87, x_position=-9, y_position=0.33, repeat=True, repeat_spacing=(4, 10),
-                       scale=0.1)
+                       scale=0.065)
 
     parallax.add_layer("assets/bush.png", depth=0.92, x_position=-2, y_position=0.2, repeat=True, repeat_spacing=(4, 6),
-                       scale=0.4)
+                       scale=0.26)
     parallax.add_layer("assets/bush2.png", depth=0.93, x_position=-5, y_position=0.15, repeat=True, repeat_spacing=(4, 7),
-                       scale=0.45)
+                       scale=0.29)
     parallax.add_layer("assets/bush3.png", depth=0.97, x_position=-7, y_position=0.1, repeat=True, repeat_spacing=(3, 8),
-                       scale=0.2)
+                       scale=0.13)
     parallax.add_layer("assets/bush4.png", depth=0.99, x_position=-9, y_position=0.1, repeat=True, repeat_spacing=(2, 9),
-                       scale=0.3)
+                       scale=0.195)
 
     print("💡 Pour ajouter des arrière-plans, décommentez les lignes add_layer() dans main.py")
     print("   - depth: 0.0=lointain, 1.0=proche")
@@ -351,11 +351,12 @@ def main():
             # 2. Dessiner le sol
             display.draw_ground(physics_world.ground)
 
-            # 3. Dessiner les premier plans parallaxe (depth >= 0.9) - DEVANT le sol
-            parallax.draw_foreground(display)
-
-            # 4. Dessiner le quadrupède
+            # 3. Dessiner le quadrupède
             overlay.draw_quadruped(quadruped)
+
+            # 4. Dessiner les premier plans parallaxe (depth >= 0.9) - DEVANT le sol
+            #    et DEVANT l'animal (l'animal passe derrière les buissons proches)
+            parallax.draw_foreground(display)
 
             display.draw_instructions()
             display.draw_camera_info()

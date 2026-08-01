@@ -81,7 +81,7 @@ def build_scene():
     parallax.add_layer("assets/tree3.png", depth=0.7, x_position=0, y_position=0,
                        repeat=True, repeat_spacing=(4, 10))
     parallax.add_layer("assets/bush.png", depth=0.92, x_position=-2, y_position=0.2,
-                       repeat=True, repeat_spacing=(4, 6), scale=0.4)
+                       repeat=True, repeat_spacing=(4, 6), scale=0.26)
     return parallax
 
 
@@ -182,8 +182,9 @@ def main():
         display.clear()
         parallax.draw_background(display)
         display.draw_ground(physics_world.ground)
-        parallax.draw_foreground(display)
         overlay.draw_quadruped(quadruped)
+        # Premier plan dessine en dernier : l'animal passe derriere les buissons proches.
+        parallax.draw_foreground(display)
 
         distance = quadruped.body.body.position.x - start_x
         info = (f"Champion {current + 1}/{len(champions)}  |  "
