@@ -10,7 +10,7 @@
 ANIMAL = "chicken"  # "fox" (renard, quadrupède) ou "chicken" (poule, bipède)
 
 # Mode de contrôle
-HUMAN_CONTROL = True  # True = contrôle humain, False = contrôle IA
+HUMAN_CONTROL = False  # True = contrôle humain, False = contrôle IA
 
 # Affichage
 DISPLAY_ENABLED = True  # True = afficher l'écran, False = mode rapide sans affichage
@@ -21,7 +21,7 @@ CONFIG = {
 }
 
 # ========== SÉLECTION DE L'IA ==========
-IA_TYPE = "neuro_ga"  # "choreography", "neuro_ga" ou "ppo" Change ici pour choisir l'IA !
+IA_TYPE = "ppo"  # "choreography", "neuro_ga" ou "ppo" Change ici pour choisir l'IA !
 
 """
 Tu peux maintenant changer facilement d'IA en modifiant juste cette variable :

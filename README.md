@@ -101,12 +101,22 @@ Every trained model is logged here, so any new algorithm can be compared to the 
 |---|---|---|---|---|---|---|---|
 | **Neuro-GA** | 🦊 Fox | 23 → 16 → 8 | 500 gen x 128 | **8079** | **105 m** | x14.8 | 3 min 41 s |
 | **Neuro-GA** | 🐔 Chicken | 19 → 16 → 6 | 500 gen x 128 | **1573** | **41 m** | x7.8 | 5 min 48 s |
-| **PPO** | 🦊 Fox | to do | | | | | |
-| **PPO** | 🐔 Chicken | to do | | | | | |
+| **PPO** | 🦊 Fox | 23 → 64 → 8 | 500 updates (2M steps) | n/a | **22.8 m** | n/a | 7 min 16 s |
+| **PPO** | 🐔 Chicken | 19 → 64 → 6 | 500 updates (2M steps) | n/a | **10.7 m** | n/a | 6 min 26 s |
 | **NEAT** | 🦊 Fox | to do | | | | | |
 | **SAC** | 🦊 Fox | to do | | | | | |
 
 Both GA rows share the same hardware, the same episode budget and the same fitness definition, which makes them directly comparable. **Gain vs gen 0** is the ratio between the final best fitness and the best fitness of the very first random generation, so it measures what the algorithm actually learned (and not how good the lucky starting population was).
+
+⚠️ **The GA and PPO rows are not a fair fight**, and the gap has little to do with the algorithms themselves :
+
+  🔢 **Simulation budget** : each GA run burned 64 000 episodes of roughly 1000 to 2000 frames, so **60 to 90 million physics steps**. Each PPO run saw **2 million steps**, which is 30 to 45 times less. PPO is simply far from convergence.
+
+  ⏱️ **Episode length** : PPO caps episodes at 1000 frames (`MAX_EPISODE_FRAMES`), the GA lets them grow up to 2000, so the raw distances are not measured over the same window.
+
+  🎯 **Objective** : the GA maximises a fitness (distance x 100, fall penalty, plus a stability bonus for the biped), PPO maximises a discounted per-step reward. The **Distance** column is the only quantity that means the same thing in both worlds.
+
+The honest conclusion for now is that **neuro-evolution reaches a good gait far more cheaply on this task**, and that PPO deserves a much longer run (20M to 50M steps) before any real verdict.
 
 ### 📝 Notes & Observations
   🦊 The quadruped fox learns to walk much faster than the chicken (standing on two legs is hard, the biped falls a lot in early generations).
