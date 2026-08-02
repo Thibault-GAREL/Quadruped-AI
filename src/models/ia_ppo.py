@@ -152,6 +152,7 @@ class QuadrupedEnv:
         self.start_x = 0.0
         self.best_x = 0.0
         self.last_progress_frame = 0
+        self.bad_frames = 0  # frames passees en appui fautif
 
     def _dog_state(self) -> Dict[str, Any]:
         body = self.quad.body.body
@@ -176,6 +177,7 @@ class QuadrupedEnv:
         self.start_x = self.quad.body.body.position.x
         self.best_x = self.start_x
         self.last_progress_frame = 0
+        self.bad_frames = 0
         return self._obs()
 
     def step(self, action: np.ndarray):
@@ -189,6 +191,17 @@ class QuadrupedEnv:
 
         x = self.quad.body.body.position.x
         reward = (x - x_before) * 100.0
+
+        # Penalite d'appui fautif : si l'animal touche le sol avec autre chose
+        # que ses pieds, le progres de CE step ne rapporte plus que
+        # (1 - GROUND_CONTACT_WEIGHT). Ramper reste donc possible mais devient
+        # bien moins payant que marcher. Meme semantique que le GA, applique
+        # par pas puisque PPO optimise par transition.
+        if self.s.USE_SHAPED_REWARD and self.quad.has_bad_ground_contact():
+            self.bad_frames += 1
+            if reward > 0:
+                reward *= 1.0 - self.s.GROUND_CONTACT_WEIGHT
+
         if self.s.ACTION_COST > 0:
             reward -= self.s.ACTION_COST * float(np.sum(np.square(action)))
 
@@ -215,6 +228,7 @@ class QuadrupedEnv:
                 'distance': x - self.start_x,
                 'frames': self.frame,
                 'fallen': terminated,
+                'bad_contact_ratio': self.bad_frames / max(self.frame, 1),
             }
         return self._obs(), reward, terminated, truncated, info
 
@@ -370,6 +384,7 @@ def run_training(animal_name: str, total_updates: int = 0):
     ep_distances: List[float] = []
     ep_frames: List[int] = []
     ep_falls: List[bool] = []
+    ep_bad_ratios: List[float] = []
 
     try:
         for update in update_range:
@@ -407,6 +422,7 @@ def run_training(animal_name: str, total_updates: int = 0):
                         ep_distances.append(info['episode']['distance'])
                         ep_frames.append(info['episode']['frames'])
                         ep_falls.append(info['episode']['fallen'])
+                        ep_bad_ratios.append(info['episode']['bad_contact_ratio'])
 
                 b_obs[step] = obs
                 b_actions[step] = action_np
@@ -489,6 +505,10 @@ def run_training(animal_name: str, total_updates: int = 0):
                 'ep_distance_mean': mean_distance,
                 'ep_frames_mean': float(np.mean(ep_frames[-50:])) if ep_frames else 0.0,
                 'ep_fall_rate': float(np.mean(ep_falls[-50:])) if ep_falls else 0.0,
+                # Part du temps passe au sol sur autre chose que les pieds.
+                # Doit baisser au fil de l'entrainement quand SHAPED_REWARD est actif.
+                'ep_bad_contact_rate': (float(np.mean(ep_bad_ratios[-50:]))
+                                        if ep_bad_ratios else 0.0),
                 'policy_loss': float(np.mean(pg_losses)),
                 'value_loss': float(np.mean(v_losses)),
                 'entropy': float(np.mean(entropies)),

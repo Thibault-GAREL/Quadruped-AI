@@ -112,7 +112,8 @@ def _build_skeleton() -> SkeletonDef:
     ]
 
     return SkeletonDef(bones=bones, muscles=muscles, root='body',
-                       self_collide=False)
+                       self_collide=False,
+                       foot_bones=['right_foot', 'left_foot'])
 
 
 def _build_skin() -> SkinSpec:

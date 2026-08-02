@@ -58,6 +58,12 @@ class SkeletonDef:
     # False = les os de l'animal ne se collisionnent pas entre eux (necessaire
     # pour les bipedes dont les deux pattes se superposent en vue de profil).
     self_collide: bool = True
+    # Os autorises a toucher le sol (les appuis naturels de l'animal). Tout
+    # autre os en contact avec le sol est considere comme un appui fautif :
+    # l'animal rampe, marche sur les genoux ou traine son torse. Sert au
+    # shaped reward (SHAPED_REWARD dans src/config.py). Liste vide = aucune
+    # verification, l'animal peut toucher le sol avec n'importe quel os.
+    foot_bones: List[str] = field(default_factory=list)
 
 
 # ============ PEAU (rendu procedural low poly) ============

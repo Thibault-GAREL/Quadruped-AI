@@ -14,7 +14,7 @@ Les valeurs peuvent etre surchargees via variables d'environnement
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
-from src.config import DISPLAY_ENABLED, ANIMAL
+from src.config import DISPLAY_ENABLED, ANIMAL, SHAPED_REWARD
 from src.animals import get_animal
 
 # L'animal selectionne determine la taille de sortie du reseau (nombre de
@@ -69,6 +69,21 @@ class NeuroGASettings(BaseSettings):
     # Surchargeable via NEURO_GA_USE_STABILITY_REWARD.
     USE_STABILITY_REWARD: bool = (ANIMAL == "chicken")
     STABILITY_WEIGHT: float = Field(50.0, ge=0.0)
+
+    # ----- Penalite d'appui fautif (shaped reward) -----
+    # Active par SHAPED_REWARD dans src/config.py, surchargeable par
+    # NEURO_GA_USE_SHAPED_REWARD. Un os autre qu'un pied qui touche le sol
+    # (genou, torse, museau) est un appui fautif.
+    #
+    # La penalite est MULTIPLICATIVE sur le gain de distance, pas additive :
+    #   distance_reward *= 1 - GROUND_CONTACT_WEIGHT * (frames_fautives / frames)
+    # Un poids additif fixe serait ingerable ici, l'echelle de la fitness va de
+    # ~1500 (poule) a ~10000 (renard) et une meme constante serait ecrasante
+    # pour l'une et negligeable pour l'autre. En multiplicatif, un animal qui
+    # rampe en permanence perd GROUND_CONTACT_WEIGHT de son gain quelle que
+    # soit son echelle, et un animal qui marche proprement ne perd rien.
+    USE_SHAPED_REWARD: bool = SHAPED_REWARD
+    GROUND_CONTACT_WEIGHT: float = Field(0.8, ge=0.0, le=1.0)
 
     # ----- Temps adaptatif -----
     ADAPTIVE_TIME: bool = True
@@ -130,6 +145,8 @@ GA_CONFIG = {
     'fall_penalty': SETTINGS.FALL_PENALTY,
     'use_stability_reward': SETTINGS.USE_STABILITY_REWARD,
     'stability_weight': SETTINGS.STABILITY_WEIGHT,
+    'use_shaped_reward': SETTINGS.USE_SHAPED_REWARD,
+    'ground_contact_weight': SETTINGS.GROUND_CONTACT_WEIGHT,
     'adaptive_time': SETTINGS.ADAPTIVE_TIME,
     'base_time': SETTINGS.BASE_TIME,
     'max_time': SETTINGS.MAX_TIME,

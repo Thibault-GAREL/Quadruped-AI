@@ -11,7 +11,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.animals import get_animal
-from src.config import ANIMAL
+from src.config import ANIMAL, SHAPED_REWARD
 
 _ANIMAL_DEF = get_animal(ANIMAL)
 
@@ -53,6 +53,15 @@ class PPOSettings(BaseSettings):
     # Active par defaut pour la poule (bipede), surchargeable via PPO_USE_STABILITY_REWARD.
     USE_STABILITY_REWARD: bool = (ANIMAL == "chicken")
     STABILITY_COEF: float = Field(1.0, ge=0.0)
+
+    # ----- Penalite d'appui fautif (shaped reward) -----
+    # Active par SHAPED_REWARD dans src/config.py, surchargeable par
+    # PPO_USE_SHAPED_REWARD. Meme semantique que le GA, appliquee par step :
+    # quand un os autre qu'un pied touche le sol, le reward de progression de
+    # CE step est ampute de GROUND_CONTACT_WEIGHT. Ramper ne rapporte donc plus
+    # que (1 - poids) de ce que rapporte le meme deplacement debout.
+    USE_SHAPED_REWARD: bool = SHAPED_REWARD
+    GROUND_CONTACT_WEIGHT: float = Field(0.8, ge=0.0, le=1.0)
 
     # ----- Optimisation PPO -----
     TOTAL_UPDATES: int = Field(500, ge=1)  # 500 updates x (16 envs x 256 steps) = ~2M steps

@@ -83,7 +83,8 @@ def _build_skeleton() -> SkeletonDef:
                   math.pi * 0.55, math.pi * 0.55, max_torque=40),
     ]
 
-    return SkeletonDef(bones=bones, muscles=muscles, root='body')
+    return SkeletonDef(bones=bones, muscles=muscles, root='body',
+                       foot_bones=['front_foot', 'back_foot'])
 
 
 def _build_skin() -> SkinSpec:

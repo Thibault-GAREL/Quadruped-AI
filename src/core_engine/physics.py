@@ -245,3 +245,32 @@ class Quadruped:
 
         # Le quadrupède est retourné si l'angle est proche de ±π (180°)
         return abs(abs(angle) - math.pi) < threshold
+
+    def has_bad_ground_contact(self) -> bool:
+        """True si un os NON declare comme appui touche le sol.
+
+        Les appuis legitimes sont listes dans `foot_bones` du SkeletonDef
+        (les pieds). Tout le reste au sol signifie que l'animal rampe, marche
+        sur les genoux ou traine son torse. Sert au shaped reward.
+
+        Retourne toujours False si l'animal ne declare aucun appui (pas de
+        verification possible, comportement historique conserve).
+        """
+        return self.count_bad_ground_contacts() > 0
+
+    def count_bad_ground_contacts(self) -> int:
+        """Nombre d'os hors appuis en contact avec le sol (0 si aucun)."""
+        foot_bones = self.definition.skeleton.foot_bones
+        if not foot_bones:
+            return 0
+
+        ground = self.physics_world.ground
+        count = 0
+        for name, bone in self.bones_by_name.items():
+            if name in foot_bones:
+                continue
+            for contact_edge in bone.body.contacts:
+                if contact_edge.contact.touching and contact_edge.other == ground:
+                    count += 1
+                    break  # un os fautif compte une seule fois
+        return count

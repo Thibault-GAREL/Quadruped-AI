@@ -57,6 +57,8 @@ def main():
     episode_start_x = quadruped.body.body.position.x
     # Somme de cos(angle du corps) sur l'episode -> moyenne = stabilite (uprightness).
     episode_uprightness_sum = 0.0
+    # Frames passees au sol sur autre chose que les pieds (shaped reward).
+    episode_bad_contact_frames = 0
 
     # Ajouter des couches d'arrière-plan
     parallax.add_layer("assets/cloud.png", depth=0.07, x_position=-1, y_position=6, repeat=True, repeat_spacing=(9, 12),
@@ -278,6 +280,10 @@ def main():
         # Accumule la stabilite (cos de l'angle du corps) apres le pas physique.
         episode_uprightness_sum += math.cos(quadruped.body.body.angle)
 
+        # Appui fautif : un os autre qu'un pied touche le sol (shaped reward).
+        if config_ia.SHAPED_REWARD and quadruped.has_bad_ground_contact():
+            episode_bad_contact_frames += 1
+
         # ===== DEBUG POSE : etat complet toutes les 5 secondes =====
         # Pour regler une pose d'equilibre : lire les angles des os et des joints.
         # now = time.time()
@@ -298,6 +304,8 @@ def main():
                 dog_state['is_fallen'] = is_fallen
                 # Moyenne de stabilite sur l'episode (pour le bonus optionnel).
                 dog_state['uprightness'] = episode_uprightness_sum / max(frame_count, 1)
+                # Frames en appui fautif (penalite du shaped reward).
+                dog_state['bad_contact_frames'] = episode_bad_contact_frames
                 ia.on_episode_end(distance, frame_count, dog_state)
 
                 # Vérifier si on doit reset
@@ -330,6 +338,7 @@ def main():
                     episode_time = 0.0
                     episode_start_x = quadruped.body.body.position.x
                     episode_uprightness_sum = 0.0
+                    episode_bad_contact_frames = 0
                     frame_count = 0
 
                     ia.reset_episode()

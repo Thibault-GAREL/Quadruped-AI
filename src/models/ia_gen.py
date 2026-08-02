@@ -88,6 +88,8 @@ class IAGenetic(IABase):
         # ---- Recompense de stabilite (dos parallele au sol) ----
         self.use_stability_reward = bool(ga_cfg.get('use_stability_reward', False))
         self.stability_weight = float(ga_cfg.get('stability_weight', 50.0))
+        self.use_shaped_reward = bool(ga_cfg.get('use_shaped_reward', False))
+        self.ground_contact_weight = float(ga_cfg.get('ground_contact_weight', 0.8))
 
         # ---- Population ----
         pop_size = ga_cfg['population_size']
@@ -161,6 +163,18 @@ class IAGenetic(IABase):
         # Plus de bonus de survie : rester immobile ne rapporte plus rien.
         is_fallen = bool(dog_state.get('is_fallen', False))
         fitness = distance * 100.0
+
+        # Penalite d'appui fautif : ampute le gain de distance a proportion du
+        # temps passe au sol sur autre chose que les pieds. Multiplicative pour
+        # rester a l'echelle de chaque animal (voir config_gen.py). Appliquee
+        # AVANT la penalite de chute et le bonus de stabilite, qui sont eux des
+        # termes additifs independants de la distance.
+        if self.use_shaped_reward and fitness > 0:
+            bad_frames = float(dog_state.get('bad_contact_frames', 0))
+            total_frames = max(float(frames_survived), 1.0)
+            bad_ratio = min(bad_frames / total_frames, 1.0)
+            fitness *= 1.0 - self.ground_contact_weight * bad_ratio
+
         if is_fallen:
             fitness -= self.fall_penalty
 

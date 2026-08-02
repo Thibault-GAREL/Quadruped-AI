@@ -43,12 +43,14 @@ def _progress(iterable, total, desc):
 _WORKER = {}
 
 
-def _init_worker(animal_name, nn_config, stagnation_frames, stagnation_min_progress):
+def _init_worker(animal_name, nn_config, stagnation_frames, stagnation_min_progress,
+                 track_ground_contacts=False):
     from src.animals import get_animal
     from src.models.policy import NeuroPolicy
     _WORKER['definition'] = get_animal(animal_name)
     _WORKER['policy'] = NeuroPolicy(nn_config)
     _WORKER['stagnation'] = (stagnation_frames, stagnation_min_progress)
+    _WORKER['track_contacts'] = track_ground_contacts
 
 
 def _eval_genome(task):
@@ -57,7 +59,8 @@ def _eval_genome(task):
     stag_frames, stag_progress = _WORKER['stagnation']
     return run_episode(_WORKER['definition'], _WORKER['policy'], genome, max_frames,
                        stagnation_frames=stag_frames,
-                       stagnation_min_progress=stag_progress)
+                       stagnation_min_progress=stag_progress,
+                       track_ground_contacts=_WORKER['track_contacts'])
 
 
 # ============ ENTRAINEMENT GA ============
@@ -91,7 +94,8 @@ def train_ga(args):
         initializer=_init_worker,
         initargs=(config_ia.ANIMAL, cfg.NN_CONFIG,
                   cfg.SETTINGS.STAGNATION_FRAMES,
-                  cfg.SETTINGS.STAGNATION_MIN_PROGRESS),
+                  cfg.SETTINGS.STAGNATION_MIN_PROGRESS,
+                  cfg.SETTINGS.USE_SHAPED_REWARD),
     )
 
     start_time = time.time()
@@ -106,9 +110,10 @@ def train_ga(args):
                                      total=len(tasks),
                                      desc=f"Gen {ia.generation}"))
 
-            for distance, frames, is_fallen, uprightness in results:
+            for distance, frames, is_fallen, uprightness, bad_frames in results:
                 ia.on_episode_end(distance, frames,
-                                  {'is_fallen': is_fallen, 'uprightness': uprightness})
+                                  {'is_fallen': is_fallen, 'uprightness': uprightness,
+                                   'bad_contact_frames': bad_frames})
                 episodes_done += 1
 
             prev_generation = ia.generation

@@ -28,11 +28,18 @@ SPAWN_X = 6.0
 
 def run_episode(definition, policy, genome, max_frames: int,
                 stagnation_frames: int = 0,
-                stagnation_min_progress: float = 0.05) -> Tuple[float, int, bool, float]:
-    """Joue un episode complet et retourne (distance, frames, is_fallen, uprightness).
+                stagnation_min_progress: float = 0.05,
+                track_ground_contacts: bool = False
+                ) -> Tuple[float, int, bool, float, int]:
+    """Joue un episode et retourne (distance, frames, is_fallen, uprightness, bad_frames).
 
     uprightness = moyenne de cos(angle du corps) sur l'episode (1 = dos
     horizontal, 0 = vertical, negatif = retourne). Sert au bonus de stabilite.
+
+    bad_frames = nombre de frames pendant lesquelles un os autre qu'un pied
+    touchait le sol (l'animal rampe ou marche sur les genoux). Vaut toujours 0
+    si track_ground_contacts est False : la detection parcourt les contacts de
+    tous les os, autant ne la payer que quand le shaped reward l'exploite.
 
     Args:
         definition: AnimalDefinition (squelette + spawn_y)
@@ -41,6 +48,7 @@ def run_episode(definition, policy, genome, max_frames: int,
         max_frames: budget de frames (= ia.current_max_time)
         stagnation_frames: nb de frames sans progres avant arret (0 = off)
         stagnation_min_progress: progres minimal (m) pour reinitialiser le compteur
+        track_ground_contacts: compter les frames en appui fautif
     """
     world = PhysicsWorld(gravity=(0, -10))
     quad = Quadruped(world, x=SPAWN_X, y=definition.spawn_y, definition=definition)
@@ -51,6 +59,7 @@ def run_episode(definition, policy, genome, max_frames: int,
     last_progress_frame = 0
     is_fallen = False
     uprightness_sum = 0.0
+    bad_contact_frames = 0
     frame = 0
 
     for frame in range(1, max_frames + 1):
@@ -74,6 +83,10 @@ def run_episode(definition, policy, genome, max_frames: int,
         # Stabilite : cos de l'angle du corps APRES le pas de physique.
         uprightness_sum += math.cos(quad.body.body.angle)
 
+        # Appui fautif : un os autre qu'un pied touche le sol.
+        if track_ground_contacts and quad.has_bad_ground_contact():
+            bad_contact_frames += 1
+
         # Fin d'episode : chute (comme main.py).
         if quad.is_upside_down():
             is_fallen = True
@@ -90,4 +103,4 @@ def run_episode(definition, policy, genome, max_frames: int,
 
     distance = quad.body.body.position.x - start_x
     uprightness = uprightness_sum / max(frame, 1)
-    return float(distance), frame, is_fallen, float(uprightness)
+    return float(distance), frame, is_fallen, float(uprightness), bad_contact_frames
