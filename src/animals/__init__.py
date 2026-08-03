@@ -14,6 +14,9 @@ def get_animal(name: str):
     if key in ('chicken', 'poule'):
         from src.animals.chicken import CHICKEN
         return CHICKEN
+    if key in ('cat', 'chat'):
+        from src.animals.cat import CAT
+        return CAT
     raise ValueError(
-        f"Animal inconnu : {name!r}. Valeurs supportees : 'fox', 'chicken'."
+        f"Animal inconnu : {name!r}. Valeurs supportees : 'fox', 'chicken', 'cat'."
     )

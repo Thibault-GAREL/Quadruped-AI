@@ -126,6 +126,33 @@ class EarSpec:
 
 
 @dataclass
+class BridgeSpec:
+    """Piece de peau tendue entre DEUX os articules.
+
+    Une Shape est rigide et ne suit qu'un seul os : a une articulation, les
+    deux formes voisines divergent des que le joint plie et une couture nette
+    apparait. Un pont, lui, est RECALCULE a chaque frame depuis la position
+    reelle de ses deux ancres, il reste donc continu quel que soit l'angle.
+
+    Il est dessine PAR DESSUS les deux formes qu'il relie, et masque la couture.
+    Les demi-hauteurs sont mesurees perpendiculairement a la ligne d'ancrage :
+    positives vers le haut pour `top`, vers le bas pour `bottom`. Une valeur
+    NEGATIVE decale le bord du meme cote que l'autre, ce qui permet de tailler
+    une bande qui ne touche pas la ligne (utile pour un reflet ou un ventre).
+    """
+    bone_a: str
+    bone_b: str
+    anchor_a: Vec2 = (0.0, 0.0)   # point local sur bone_a
+    anchor_b: Vec2 = (0.0, 0.0)   # point local sur bone_b
+    top_a: float = 0.3
+    top_b: float = 0.3
+    bottom_a: float = 0.3
+    bottom_b: float = 0.3
+    color: str = "coat"
+    facets: bool = True
+
+
+@dataclass
 class SkinSpec:
     """Description complete du rendu procedural d'un animal."""
     palette: Dict[str, Color]
@@ -135,6 +162,17 @@ class SkinSpec:
     # Cle = nom de l'os porteur, valeur = liste de formes (ordre = ordre de dessin).
     body_shapes: List[Shape] = field(default_factory=list)
     head_shapes: List[Shape] = field(default_factory=list)
+
+    # Formes attachees a un os QUELCONQUE (cle = nom de l'os). Indispensable
+    # aux animaux dont le tronc est articule en plusieurs segments : body_shapes
+    # ne suit que l'os racine, donc un chat au dos souple (body_back articule
+    # sur body_front) laisserait sa croupe sans peau. Ces formes sont dessinees
+    # JUSTE AVANT body_shapes, donc l'os racine passe devant.
+    extra_shapes: Dict[str, List[Shape]] = field(default_factory=dict)
+
+    # Pieces de liaison entre deux os articules, dessinees APRES body_shapes
+    # (donc par dessus tout le torse). Voir BridgeSpec.
+    bridges: List["BridgeSpec"] = field(default_factory=list)
 
     # Cou : capsule dynamique entre le corps et la tete (suit l'os 'neck').
     neck_bone: str = "neck"

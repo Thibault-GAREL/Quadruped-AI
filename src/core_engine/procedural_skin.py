@@ -166,6 +166,38 @@ class ProceduralSkin:
             max(1, int(hw_bottom * ppm)),
         )
 
+    def _draw_bridge(self, display, quadruped, spec):
+        """Quadrilatere tendu entre deux os, recalcule a chaque frame.
+
+        Contrairement a une Shape (rigide, attachee a un seul os), ce polygone
+        suit la position REELLE de ses deux ancres. Il reste donc continu quand
+        l'articulation plie, ce qui masque la couture entre les deux moities.
+        """
+        bone_a = quadruped.bones_by_name.get(spec.bone_a)
+        bone_b = quadruped.bones_by_name.get(spec.bone_b)
+        if bone_a is None or bone_b is None:
+            return
+
+        pa = self._local_to_world(bone_a, [spec.anchor_a])[0]
+        pb = self._local_to_world(bone_b, [spec.anchor_b])[0]
+        dx, dy = pb[0] - pa[0], pb[1] - pa[1]
+        length = math.hypot(dx, dy)
+        if length < 1e-6:
+            return
+
+        # Normale unitaire a la ligne d'ancrage : porte les demi-hauteurs.
+        nx, ny = -dy / length, dx / length
+        pts = [
+            (pa[0] + nx * spec.top_a, pa[1] + ny * spec.top_a),
+            (pb[0] + nx * spec.top_b, pb[1] + ny * spec.top_b),
+            (pb[0] - nx * spec.bottom_b, pb[1] - ny * spec.bottom_b),
+            (pa[0] - nx * spec.bottom_a, pa[1] - ny * spec.bottom_a),
+        ]
+        self._draw_polygon(
+            display, pts, self.skin.palette[spec.color], spec.color,
+            facets=spec.facets,
+        )
+
     def _draw_shape(self, display, bone_or_frame, shape, is_head=False):
         """Dessine une Shape locale (polygone ou cercle) attachee a un os."""
         color = self.skin.palette[shape.color]
@@ -476,9 +508,26 @@ class ProceduralSkin:
                 self._draw_ear(display, head_frame, spec, state)
 
         # 6. Torse (dessine apres le cou/tete pour passer au premier plan).
+        #    D'abord les pieces de liaison, EN DESSOUS : elles comblent le pli
+        #    d'une articulation sans jamais pouvoir deborder de la silhouette,
+        #    puisque les formes rigides sont peintes par dessus. Les dessiner
+        #    au dessus produirait l'effet inverse (une boite visible sur le dos).
+        for bridge in skin.bridges:
+            self._draw_bridge(display, quadruped, bridge)
+
+        #    Puis les segments de tronc secondaires (croupe d'un animal au dos
+        #    articule), l'os racine les recouvrant en dernier.
+        for bone_name, shapes in skin.extra_shapes.items():
+            bone = quadruped.bones_by_name.get(bone_name)
+            if bone is None:
+                continue
+            for shape in shapes:
+                self._draw_shape(display, bone, shape)
+
         body = quadruped.body
         for shape in skin.body_shapes:
             self._draw_shape(display, body, shape)
+
 
         # 7. Pattes dessinees DEVANT le torse (pattes avant : leur cuisse passe
         #    devant le ventre, sinon le ventre clair la mange).
