@@ -7,7 +7,7 @@
 # Chaque animal est défini dans src/animals/ (squelette + peau procédurale).
 # Pour en ajouter un : créer le module puis l'enregistrer dans
 # src/animals/__init__.py (get_animal).
-ANIMAL = "chicken"  # "fox" (renard, quadrupède) ou "chicken" (poule, bipède)
+ANIMAL = "fox"  # "fox" (renard, quadrupède) ou "chicken" (poule, bipède)
 
 # Mode de contrôle
 HUMAN_CONTROL = False  # True = contrôle humain, False = contrôle IA
@@ -40,15 +40,26 @@ CONFIG = {
 IA_TYPE = "ppo"  # "choreography", "neuro_ga" ou "ppo" Change ici pour choisir l'IA !
 
 """
-Tu peux maintenant changer facilement d'IA en modifiant juste cette variable :
+IA_TYPE ne concerne que main.py (controle clavier et entrainement fenetre) :
 - `"choreography"` → Algorithme génétique sur sequence d'actions (boucle ouverte)
 - `"neuro_ga"`     → Neuroevolution : algo génétique sur les poids d'un MLP (boucle fermee, reactive)
-- `"ppo"`          → PPO (PyTorch). Entrainement : python train.py --algo ppo
-                     main.py sert alors a visualiser la politique entrainee.
+- `"ppo"`          → NON gere par main.py (sa boucle est vectorisee et headless).
+                     Entrainement : python train.py --algo ppo
+                     Visualisation : python replay.py outputs/models/{animal}_ppo.pt
 - `"dqn"` → DQN (quand tu l'implémenteras)
 - `"neat"` → NEAT (quand tu l'implémenteras)
+
+Qui fait quoi :
+    train.py   entrainement serieux, headless et parallele (GA et PPO)
+    main.py    controle clavier, et entrainement fenetre (GA, choregraphie)
+    replay.py  visualisation d'un modele deja entraine, GA comme PPO
 
 Entrainement RAPIDE (headless, parallele, recommande / Runpod) :
     python train.py --algo ga     (neuroevolution, tous les coeurs CPU)
     python train.py --algo ppo    (PPO vectorise, PyTorch)
+
+Visualisation d'un resultat (detecte tout seul le type de modele) :
+    python replay.py                                    dernier modele trouve
+    python replay.py outputs/results/neuro-ga_run-23_date-2026-08-03
+    python replay.py outputs/models/fox_ppo.pt
 """

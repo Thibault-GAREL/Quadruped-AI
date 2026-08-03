@@ -195,6 +195,83 @@ class ParallaxManager:
 
 
 # ============================================
+# Decor par defaut (partage par main.py et replay.py)
+# ============================================
+
+def build_default_scene():
+    """Construit le decor complet du jeu et retourne le ParallaxManager.
+
+    UNIQUE source de verite du decor : main.py et replay.py appellent tous
+    les deux cette fonction, pour que la scene rejouee soit exactement celle
+    de la simulation. Toute couche ajoutee ici apparait dans les deux.
+
+    Ordre de dessin cote appelant : draw_background, sol, animal, puis
+    draw_foreground (les couches de depth >= 0.9 passent devant l'animal).
+    """
+    parallax = ParallaxManager()
+
+    # ----- Ciel -----
+    parallax.add_layer("assets/cloud.png", depth=0.07, x_position=-1, y_position=6, repeat=True,
+                       repeat_spacing=(9, 12), scale=0.4)
+    parallax.add_layer("assets/cloud2.png", depth=0.05, x_position=5, y_position=5, repeat=True,
+                       repeat_spacing=(5, 7), scale=0.3)
+
+    # ----- Montagnes -----
+    parallax.add_layer("assets/mountain2.png", depth=0.1, x_position=0, y_position=0, repeat=True,
+                       repeat_spacing=(9, 12), scale=1.3)
+
+    # ----- Collines -----
+    parallax.add_layer("assets/hill1.png", depth=0.15, x_position=-4, y_position=-0.16, repeat=True,
+                       repeat_spacing=(6, 10), scale=1.4)
+    parallax.add_layer("assets/hill2.png", depth=0.14, x_position=15, y_position=-0.16, repeat=True,
+                       repeat_spacing=(5, 10))
+    parallax.add_layer("assets/hill3.png", depth=0.19, x_position=-15, y_position=-0.16, repeat=True,
+                       repeat_spacing=(4, 8))
+    parallax.add_layer("assets/hill4.png", depth=0.23, x_position=8, y_position=-0.16, repeat=True,
+                       repeat_spacing=(6, 8))
+    parallax.add_layer("assets/hill1.png", depth=0.15, x_position=-6, y_position=-0.16, repeat=True,
+                       repeat_spacing=(6, 10))
+    parallax.add_layer("assets/hill2.png", depth=0.14, x_position=20, y_position=-0.16, repeat=True,
+                       repeat_spacing=(5, 10))
+    parallax.add_layer("assets/hill3.png", depth=0.19, x_position=-19, y_position=-0.16, repeat=True,
+                       repeat_spacing=(5, 6))
+    parallax.add_layer("assets/hill4.png", depth=0.23, x_position=14, y_position=-0.16, repeat=True,
+                       repeat_spacing=(6, 8))
+
+    # ----- Arbres -----
+    parallax.add_layer("assets/tree3.png", depth=0.7, x_position=0, y_position=0, repeat=True,
+                       repeat_spacing=(4, 10))
+    parallax.add_layer("assets/tree3.png", depth=0.7, x_position=3, y_position=0, repeat=True,
+                       repeat_spacing=(4, 10), scale=1.1)
+    parallax.add_layer("assets/tree4.png", depth=0.6, x_position=-2, y_position=0, repeat=True,
+                       repeat_spacing=(4, 10), scale=0.9)
+    parallax.add_layer("assets/tree5.png", depth=0.5, x_position=-6, y_position=0, repeat=True,
+                       repeat_spacing=(4, 10))
+
+    # ----- Buissons d'arriere-plan (derriere l'animal) -----
+    parallax.add_layer("assets/bush.png", depth=0.8, x_position=-2, y_position=0.35, repeat=True,
+                       repeat_spacing=(4, 10), scale=0.16)
+    parallax.add_layer("assets/bush2.png", depth=0.83, x_position=-5, y_position=0.35, repeat=True,
+                       repeat_spacing=(4, 10), scale=0.10)
+    parallax.add_layer("assets/bush3.png", depth=0.84, x_position=-7, y_position=0.34, repeat=True,
+                       repeat_spacing=(4, 10), scale=0.13)
+    parallax.add_layer("assets/bush4.png", depth=0.87, x_position=-9, y_position=0.33, repeat=True,
+                       repeat_spacing=(4, 10), scale=0.065)
+
+    # ----- Buissons d'avant-plan (devant l'animal) -----
+    parallax.add_layer("assets/bush.png", depth=0.92, x_position=-2, y_position=0.2, repeat=True,
+                       repeat_spacing=(4, 6), scale=0.26)
+    parallax.add_layer("assets/bush2.png", depth=0.93, x_position=-5, y_position=0.15, repeat=True,
+                       repeat_spacing=(4, 7), scale=0.29)
+    parallax.add_layer("assets/bush3.png", depth=0.97, x_position=-7, y_position=0.1, repeat=True,
+                       repeat_spacing=(3, 8), scale=0.13)
+    parallax.add_layer("assets/bush4.png", depth=0.99, x_position=-9, y_position=0.1, repeat=True,
+                       repeat_spacing=(2, 9), scale=0.195)
+
+    return parallax
+
+
+# ============================================
 # Fonctions utilitaires pour créer des arrière-plans procéduraux
 # (au cas où l'utilisateur n'a pas d'images)
 # ============================================
