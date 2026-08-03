@@ -1,0 +1,16 @@
+{
+  "update": 500,
+  "ep_distance_mean": 21.450375051498412,
+  "ep_frames_mean": 661.86,
+  "ep_fall_rate": 0.06,
+  "ep_bad_contact_rate": 0.26039672491945903,
+  "policy_loss": -0.014305979620257859,
+  "value_loss": 351.1224519729614,
+  "entropy": 3.5875600188970567,
+  "approx_kl": 0.012375586839334573,
+  "clip_fraction": 0.14423828125,
+  "fps": 5695.869165087968,
+  "total_steps": 2048000,
+  "log_std_mean": -0.8206804394721985,
+  "best_distance": 28.22446071624756
+}
