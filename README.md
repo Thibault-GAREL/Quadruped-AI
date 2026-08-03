@@ -50,17 +50,20 @@ Two learning algorithms make them walk : a **neuro-evolution** (a small neural n
 ## Example Outputs
 
 The fox and the chicken, both drawn **100% procedurally** from their Box2D skeleton :
+
 <p align="center">
   <img src="assets/render_fox.png" alt="Procedural fox" width="80%">
   <img src="assets/render_chicken.png" alt="Procedural chicken" width="80%">
 </p>
 
 We can control an animal and the view (you can clearly see the parallax and the different modes, procedural / skeleton / overlay) :
+
 <p align="center">
   <img src="assets/Gif-human-controled.gif" alt="Example Outputs : Human controlled">
 </p>
 
 Here is the algorithm that selects the best choreography :
+
 <p align="center">
   <img src="assets/Gif-select-choregraphy.gif" alt="Example Outputs : Select best choreography">
 </p>
@@ -70,6 +73,11 @@ Here is the algorithm that selects the best choreography :
 Here is the **best champion of each species**, both trained from scratch (random weights, no prior knowledge) on a **32 vCPU Runpod CPU pod** with the exact same budget : 500 generations of 128 individuals, so 64 000 episodes per run.
 
 #### Genetic Algorithm :
+
+The **fox** converges on a genuine four-legged gait, keeps its back roughly horizontal and covers **105 m** before the episode ends. The **chicken** has a much harder job (two legs, a high center of mass, and a body that wants to tip forward), so it settles on a fast hopping gait and reaches **41 m**. The biped also needs an extra **stability reward** in its fitness, otherwise the population converges on animals that fall immediately.
+
+##### 🦊 Fox, 105 m
+
 <p align="center">
   <img src="assets/GA-Fox-105m.gif" alt="GA Fox, 105 m" width="80%">
 </p>
@@ -81,6 +89,22 @@ Here is the **best champion of each species**, both trained from scratch (random
 # set ANIMAL = "fox" in src/config.py, then :
 python replay.py outputs/results/neuro-ga_run-22_date-2026-07-31
 ```
+
+<details>
+<summary>📈 Training curves</summary>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/curves-ga-fox-dark.png">
+  <img src="assets/curves-ga-fox.png" alt="GA fox training curves" width="100%">
+</picture>
+
+The best individual climbs in **steps**, which is how a genetic algorithm looks from the inside : nothing improves for dozens of generations, then one lucky mutation raises the bar for everyone. The orange band is the population spread (one standard deviation), and it stays wide to the very end, mutation keeps producing bad walkers even once the elite is good.
+
+The bottom panel explains the acceleration around generation 250 : the episode length is tied to the best fitness, so the fox unlocks the full **2000 frames** and gets the room to run further.
+
+</details>
+
+##### 🐔 Chicken, 41 m
 
 <p align="center">
   <img src="assets/GA-Chicken-41m.gif" alt="GA Chicken, 41 m" width="80%">
@@ -94,11 +118,25 @@ python replay.py outputs/results/neuro-ga_run-22_date-2026-07-31
 python replay.py outputs/results/neuro-ga-chicken_run-18_date-2026-07-31
 ```
 
-The **fox** converges on a genuine four-legged gait, keeps its back roughly horizontal and covers **105 m** before the episode ends. The **chicken** has a much harder job (two legs, a high center of mass, and a body that wants to tip forward), so it settles on a fast hopping gait and reaches **41 m**. The biped also needs an extra **stability reward** in its fitness, otherwise the population converges on animals that fall immediately.
+<details>
+<summary>📈 Training curves</summary>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/curves-ga-chicken-dark.png">
+  <img src="assets/curves-ga-chicken.png" alt="GA chicken training curves" width="100%">
+</picture>
+
+Compare this to the fox above : the chicken **flatlines**. Its best fitness is reached around generation 119 and never moves again for the remaining 381 generations.
+
+The bottom panel shows why, and it is mechanical rather than a lack of talent. Episode length grows with the best fitness, so a low score buys a short episode, a short episode caps the distance, and a capped distance caps the score. The chicken stays stuck at **971 frames** out of the 2000 the fox enjoys. This is exactly the trap the shaped reward breaks further down the page.
+
+</details>
 
 #### PPO :
 
 Same task, same animals, but the policy is learned by **gradient descent** instead of evolution. PPO worked on a much smaller simulation budget here, **2 million physics steps** against 60 to 90 million for the GA (see the comparison table below).
+
+##### 🦊 Fox, 22.8 m
 
 <p align="center">
   <img src="assets/PPO-Fox-23m.gif" alt="PPO Fox, 23 m" width="80%">
@@ -112,6 +150,8 @@ Same task, same animals, but the policy is learned by **gradient descent** inste
 python replay.py outputs/models/ppo-fox_run-02_date-2026-08-02
 ```
 
+##### 🐔 Chicken, 10.7 m
+
 <p align="center">
   <img src="assets/PPO-Chicken-10m.gif" alt="PPO Chicken, 10 m" width="80%">
 </p>
@@ -124,11 +164,15 @@ python replay.py outputs/models/ppo-fox_run-02_date-2026-08-02
 python replay.py outputs/models/ppo-chicken_run-01_date-2026-08-02
 ```
 
+---
+
 ### 🦶 Same runs, with the shaped reward
 
 `SHAPED_REWARD = True` penalises any contact between the ground and something other than the feet, so the fox can no longer walk on its knees and the chicken can no longer drag its chest along the floor. Both learn a cleaner gait, and the trade is visible below.
 
 #### Genetic Algorithm, with shaped reward :
+
+##### 🦊 Fox, 76 m
 
 <p align="center">
   <img src="assets/GA-Shaped-Fox-76m.gif" alt="GA Fox, shaped reward, 76 m" width="80%">
@@ -142,6 +186,22 @@ python replay.py outputs/models/ppo-chicken_run-01_date-2026-08-02
 python replay.py outputs/results/neuro-ga_run-23_date-2026-08-03
 ```
 
+<details>
+<summary>📈 Training curves</summary>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/curves-ga-fox-shaped-dark.png">
+  <img src="assets/curves-ga-fox-shaped.png" alt="GA fox with shaped reward, training curves" width="100%">
+</picture>
+
+Same staircase as the unshaped fox, simply graded on a stricter scale : every frame spent on a knee scales the distance gain down, so the curve tops out at 6637 instead of 8079. The shape of the learning is unchanged, which is the point, the penalty redirects the search without breaking it.
+
+The fox still unlocks the full **2000 frames**, so it never falls into the chicken's trap.
+
+</details>
+
+##### 🐔 Chicken, 19 m
+
 <p align="center">
   <img src="assets/GA-Shaped-Chicken-19m.gif" alt="GA Chicken, shaped reward, 19 m" width="80%">
 </p>
@@ -154,7 +214,23 @@ python replay.py outputs/results/neuro-ga_run-23_date-2026-08-03
 python replay.py outputs/results/neuro-ga-chicken_run-19_date-2026-08-03
 ```
 
+<details>
+<summary>📈 Training curves</summary>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/curves-ga-chicken-shaped-dark.png">
+  <img src="assets/curves-ga-chicken-shaped.png" alt="GA chicken with shaped reward, training curves" width="100%">
+</picture>
+
+This is the most interesting chart of the project. Put it next to the unshaped chicken above : the flat line is gone, the fitness keeps climbing all the way to generation 500 and reaches **4159** instead of stalling at 1573.
+
+The bottom panel holds the explanation. Forbidden from dragging its chest, the chicken had to find a real gait, that gait scores higher, and the higher score buys longer episodes : **1747 frames** against 971 without shaping. The vicious circle became a virtuous one, and it was triggered by a constraint rather than by more training.
+
+</details>
+
 #### PPO, with shaped reward :
+
+##### 🦊 Fox, 74 m
 
 <p align="center">
   <img src="assets/PPO-Shaped-Fox-74m.gif" alt="PPO Fox, shaped reward, 74 m" width="80%">
@@ -167,6 +243,8 @@ python replay.py outputs/results/neuro-ga-chicken_run-19_date-2026-08-03
 # set ANIMAL = "fox" in src/config.py, then :
 python replay.py outputs/models/ppo-fox_run-03_date-2026-08-03/last_model.pt
 ```
+
+##### 🐔 Chicken, 93 m
 
 <p align="center">
   <img src="assets/PPO-Shaped-Chicken-93m.gif" alt="PPO Chicken, shaped reward, 93 m" width="80%">
@@ -181,6 +259,8 @@ python replay.py outputs/models/ppo-chicken_run-02_date-2026-08-03/last_model.pt
 ```
 
 ⚠️ Those two PPO commands point at **`last_model.pt`**, the policy as it stood at the end of training, and not at `best_model.pt`. The "best" checkpoint is the one that scored highest on the 1000 frame episodes used during training, which says nothing about holding a gait for 3000 frames. On the chicken the gap is brutal : `last_model.pt` walks 93 m where `best_model.pt` falls after 8 m.
+
+---
 
 ### 📊 Training runs comparison
 
