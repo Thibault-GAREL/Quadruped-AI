@@ -21,8 +21,6 @@ Each animal (a **fox** quadruped, a **chicken** biped) has real physics, muscles
 
 Two learning algorithms make them walk : a **neuro-evolution** (a small neural network evolved by a genetic algorithm) and a custom **PPO** (Proximal Policy Optimization) written in PyTorch. Everything can be trained **headless and in parallel** (locally or on Runpod), and analysed with **MLflow** and **Power BI**.
 
-🚨 The project is not **finished** ! 🚨
-
 ---
 
 ## ⚙️ Features
@@ -46,7 +44,7 @@ Constructed :
 
   🕺 An algorithm to select the best **choreography** (open loop).
 
-Project for the futur :
+Project for the futur :  
   🐺 More animals (the design is config-driven).
 
   🧠 Other algorithms (NEAT, SAC...).
@@ -83,6 +81,11 @@ Here is the **best champion of each species**, both trained from scratch (random
   <i>The fox walks <b>105 m</b>.</i>
 </p>
 
+```bash
+# set ANIMAL = "fox" in src/config.py, then :
+python replay.py outputs/results/neuro-ga_run-22_date-2026-07-31
+```
+
 <p align="center">
   <img src="assets/GA-Chicken-41m.gif" alt="GA Chicken, 41 m" width="80%">
 </p>
@@ -90,8 +93,106 @@ Here is the **best champion of each species**, both trained from scratch (random
   <i>The chicken <b>41 m</b>.</i>
 </p>
 
+```bash
+# set ANIMAL = "chicken" in src/config.py, then :
+python replay.py outputs/results/neuro-ga-chicken_run-18_date-2026-07-31
+```
 
 The **fox** converges on a genuine four-legged gait, keeps its back roughly horizontal and covers **105 m** before the episode ends. The **chicken** has a much harder job (two legs, a high center of mass, and a body that wants to tip forward), so it settles on a fast hopping gait and reaches **41 m**. The biped also needs an extra **stability reward** in its fitness, otherwise the population converges on animals that fall immediately.
+
+#### PPO :
+
+Same task, same animals, but the policy is learned by **gradient descent** instead of evolution. Note that PPO only saw **2 million physics steps** here against 60 to 90 million for the GA, so it is far from having said its last word (see the comparison table below).
+
+<p align="center">
+  <img src="assets/PPO-Fox-23m.gif" alt="PPO Fox, 23 m" width="80%">
+</p>
+<p align="center">
+  <i>The fox walks <b>22.8 m</b>.</i>
+</p>
+
+```bash
+# set ANIMAL = "fox" in src/config.py, then :
+python replay.py outputs/models/ppo-fox_run-02_date-2026-08-02
+```
+
+<p align="center">
+  <img src="assets/PPO-Chicken-10m.gif" alt="PPO Chicken, 10 m" width="80%">
+</p>
+<p align="center">
+  <i>The chicken <b>10.7 m</b>.</i>
+</p>
+
+```bash
+# set ANIMAL = "chicken" in src/config.py, then :
+python replay.py outputs/models/ppo-chicken_run-01_date-2026-08-02
+```
+
+<!-- ============================================================
+     MISSING GIFs : the four SHAPED REWARD runs (2026-08-03).
+     Those runs are already trained and committed, only the GIFs
+     are missing. Record them with the commands below, drop the
+     files in assets/, then uncomment the block.
+
+     What changed : with SHAPED_REWARD = True the animals are
+     penalised for touching the ground with anything but their
+     feet, so the fox can no longer walk on its knees and the
+     chicken can no longer drag its chest. The chicken gains the
+     most (PPO 10.7 m -> 28.22 m, GA 1573 -> 4159) because it was
+     the one cheating hardest.
+
+#### Genetic Algorithm, with shaped reward :
+
+<p align="center">
+  <img src="assets/GA-Shaped-Fox-XXm.gif" alt="GA Fox, shaped reward" width="80%">
+</p>
+<p align="center">
+  <i>The fox walks <b>XX m</b>, now on its feet.</i>
+</p>
+
+```bash
+# set ANIMAL = "fox" in src/config.py, then :
+python replay.py outputs/results/neuro-ga_run-23_date-2026-08-03
+```
+
+<p align="center">
+  <img src="assets/GA-Shaped-Chicken-XXm.gif" alt="GA Chicken, shaped reward" width="80%">
+</p>
+<p align="center">
+  <i>The chicken <b>XX m</b>, no longer dragging its chest.</i>
+</p>
+
+```bash
+# set ANIMAL = "chicken" in src/config.py, then :
+python replay.py outputs/results/neuro-ga-chicken_run-19_date-2026-08-03
+```
+
+#### PPO, with shaped reward :
+
+<p align="center">
+  <img src="assets/PPO-Shaped-Fox-22m.gif" alt="PPO Fox, shaped reward" width="80%">
+</p>
+<p align="center">
+  <i>The fox walks <b>22.15 m</b>, on its feet this time.</i>
+</p>
+
+```bash
+# set ANIMAL = "fox" in src/config.py, then :
+python replay.py outputs/models/ppo-fox_run-03_date-2026-08-03
+```
+
+<p align="center">
+  <img src="assets/PPO-Shaped-Chicken-28m.gif" alt="PPO Chicken, shaped reward" width="80%">
+</p>
+<p align="center">
+  <i>The chicken <b>28.22 m</b>, and it now beats the fox.</i>
+</p>
+
+```bash
+# set ANIMAL = "chicken" in src/config.py, then :
+python replay.py outputs/models/ppo-chicken_run-02_date-2026-08-03
+```
+     ============================================================ -->
 
 ### 📊 Training runs comparison
 
@@ -103,6 +204,10 @@ Every trained model is logged here, so any new algorithm can be compared to the 
 | **Neuro-GA** | 🐔 Chicken | 19 → 16 → 6 | 500 gen x 128 | **1573** | **41 m** | x7.8 | 5 min 48 s |
 | **PPO** | 🦊 Fox | 23 → 64 → 8 | 500 updates (2M steps) | n/a | **22.8 m** | n/a | 7 min 16 s |
 | **PPO** | 🐔 Chicken | 19 → 64 → 6 | 500 updates (2M steps) | n/a | **10.7 m** | n/a | 6 min 26 s |
+| **Neuro-GA** + shaped | 🦊 Fox | 23 → 16 → 8 | 500 gen x 128 | **6637** | to record | x16.0 | 17 min 32 s |
+| **Neuro-GA** + shaped | 🐔 Chicken | 19 → 16 → 6 | 500 gen x 128 | **4159** | to record | x29.7 | 9 min 15 s |
+| **PPO** + shaped | 🦊 Fox | 23 → 64 → 8 | 500 updates (2M steps) | n/a | **22.15 m** | n/a | 5 min 44 s |
+| **PPO** + shaped | 🐔 Chicken | 19 → 64 → 6 | 500 updates (2M steps) | n/a | **28.22 m** | n/a | 4 min 59 s |
 | **NEAT** | 🦊 Fox | to do | | | | | |
 | **SAC** | 🦊 Fox | to do | | | | | |
 
@@ -117,6 +222,14 @@ Both GA rows share the same hardware, the same episode budget and the same fitne
   🎯 **Objective** : the GA maximises a fitness (distance x 100, fall penalty, plus a stability bonus for the biped), PPO maximises a discounted per-step reward. The **Distance** column is the only quantity that means the same thing in both worlds.
 
 The honest conclusion for now is that **neuro-evolution reaches a good gait far more cheaply on this task**, and that PPO deserves a much longer run (20M to 50M steps) before any real verdict.
+
+The **+ shaped** rows use `SHAPED_REWARD = True`, which penalises any contact between the ground and something other than the feet. Two things stand out :
+
+  🐔 **The chicken is transformed** : 10.7 m to **28.22 m** in PPO, 1573 to **4159** in GA. It now even beats the fox. Being a biped, it was the one cheating hardest, dragging its chest instead of walking, and forcing it onto its feet unlocked a real gait. The adaptive episode length tells the same story, it went from 971 to **1747 frames**.
+
+  🦊 **The fox barely moves** (22.79 m to 22.15 m in PPO, a 3 % gap). Its knee-walking was already about as efficient as a proper gait, so it loses almost nothing by walking cleanly.
+
+⚠️ The two GA fitness values are **not comparable to the rows above** : the formula itself changed, since the penalty scales the distance gain down. A drop from 8079 to 6637 does not mean the fox walks worse, only that it is now graded on a stricter scale. Only the PPO distances compare literally.
 
 ### 📝 Notes & Observations
   🦊 The quadruped fox learns to walk much faster than the chicken (standing on two legs is hard, the biped falls a lot in early generations).
@@ -247,7 +360,9 @@ python main.py
 
   🤖 `HUMAN_CONTROL = False` + `IA_TYPE = "neuro_ga"` : train the genetic algorithm live in the window.
 
-  🐤 `IA_TYPE = "ppo"` : watch a PPO policy trained with `train.py`.
+  🕺 `IA_TYPE = "choreography"` : train the choreography selection live in the window.
+
+⚠️ `IA_TYPE = "ppo"` is **not** handled by `main.py` and exits with a message pointing you to the right tool. PPO trains headless with vectorized environments (`train.py --algo ppo`), and a trained policy is watched with `replay.py`. Each script has one job : `train.py` trains, `main.py` drives and trains in-window, `replay.py` watches.
 
 In-window keys : `TAB` switch render mode (procedural / skeleton / overlay), `F1` camera follow, `F2` toggle rendering (fast mode), `S` save, `ESC` quit.
 
@@ -269,13 +384,23 @@ $env:PPO_N_ENVS = "32"   ; python train.py --algo ppo --updates 1000
 ```
 ⚠️ This project is **CPU-bound** (the Box2D physics runs on the CPU and the networks are tiny). The GA gains **nothing** from a GPU, and even PPO is often just as fast on CPU. Prefer a **many-core CPU** machine (only one GPU is ever used, no multi-GPU). See `RUNPOD.md` for a long training on a **Runpod CPU pod**.
 
-### 🎬 Replay the GA champions (`replay.py`)
+### 🎬 Watch a trained model (`replay.py`)
+This is how every GIF above was recorded. It reads **both** algorithms and picks the right one from the file you give it :
 ```bash
-python replay.py       # best champion of the latest run, walking in the scenery
-python replay.py outputs/results/neuro-ga_run-03_date-2026-07-09   # a specific run
+python replay.py       # latest model found, whatever produced it
+
+# Genetic algorithm : the run folder holds one champion per generation
+python replay.py outputs/results/neuro-ga_run-22_date-2026-07-31
+
+# PPO : a single trained policy, either its run folder or the .pt directly
+python replay.py outputs/models/ppo-fox_run-02_date-2026-08-02
+python replay.py outputs/models/fox_ppo.pt
 ```
-Keys : `→ / ←` next / previous generation, `↑` jump to the best, `SPACE` replay from start, `ESC` quit.
-(Set `ANIMAL` in `src/config.py` to match the animal you trained.)
+Keys : `SPACE` replay from start, `F1` camera follow, `ESC` quit. With the GA you also get `→ / ←` next and previous generation, `↑` jump to the best champion, `HOME / END` first and last generation. PPO has a single final policy, so it has no generation to browse.
+
+Set `ANIMAL` in `src/config.py` to match the animal you trained. If it does not match, `replay.py` tells you which value to use instead of failing on a dimension mismatch.
+
+⚠️ Careful, `outputs/models/{animal}_ppo.pt` is the **rolling** checkpoint, overwritten by every new PPO run. To replay a specific past run, point at its dated folder as shown above.
 
 ---
 
