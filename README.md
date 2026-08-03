@@ -25,7 +25,6 @@ Two learning algorithms make them walk : a **neuro-evolution** (a small neural n
 
 ## ⚙️ Features
 
-Constructed :
   🦴 Real physics with muscles, interaction with the **box2D** library.
 
   🎨 **Procedural low-poly rendering** drawn from the bones (no glued textures), with visible facets to match the scenery.
@@ -44,10 +43,7 @@ Constructed :
 
   🕺 An algorithm to select the best **choreography** (open loop).
 
-Project for the futur :  
-  🐺 More animals (the design is config-driven).
-
-  🧠 Other algorithms (NEAT, SAC...).
+  🦶 **Shaped reward** that penalises any ground contact outside the feet, so the animals walk instead of crawling.
 
 ---
 
@@ -102,7 +98,7 @@ The **fox** converges on a genuine four-legged gait, keeps its back roughly hori
 
 #### PPO :
 
-Same task, same animals, but the policy is learned by **gradient descent** instead of evolution. Note that PPO only saw **2 million physics steps** here against 60 to 90 million for the GA, so it is far from having said its last word (see the comparison table below).
+Same task, same animals, but the policy is learned by **gradient descent** instead of evolution. PPO worked on a much smaller simulation budget here, **2 million physics steps** against 60 to 90 million for the GA (see the comparison table below).
 
 <p align="center">
   <img src="assets/PPO-Fox-23m.gif" alt="PPO Fox, 23 m" width="80%">
@@ -200,8 +196,6 @@ Every trained model is logged here, so any new algorithm can be compared to the 
 | **Neuro-GA** + shaped | 🐔 Chicken | 19 → 16 → 6 | 500 gen x 128 | **4159** | **19 m** | x29.7 | 9 min 15 s |
 | **PPO** + shaped | 🦊 Fox | 23 → 64 → 8 | 500 updates (2M steps) | n/a | **74 m** | n/a | 5 min 44 s |
 | **PPO** + shaped | 🐔 Chicken | 19 → 64 → 6 | 500 updates (2M steps) | n/a | **93 m** | n/a | 4 min 59 s |
-| **NEAT** | 🦊 Fox | to do | | | | | |
-| **SAC** | 🦊 Fox | to do | | | | | |
 
 Both GA rows share the same hardware, the same episode budget and the same fitness definition, which makes them directly comparable. **Gain vs gen 0** is the ratio between the final best fitness and the best fitness of the very first random generation, so it measures what the algorithm actually learned (and not how good the lucky starting population was).
 
