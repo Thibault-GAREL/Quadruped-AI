@@ -19,7 +19,7 @@ This project is a playground to understand how to use **Box2D** with **Pygame**,
 
 Each animal (a **fox** quadruped, a **chicken** biped) has real physics, muscles (joint motors), and a **fully procedural low-poly look drawn by code** (no more glued images). The body, legs, springy ears and whip-like tail are rendered directly from the Box2D bones, so adding a new animal is just a config file.
 
-Two learning algorithms make them walk : a **neuro-evolution** (a small neural network evolved by a genetic algorithm) and a custom **PPO** (Proximal Policy Optimization) written in PyTorch. Everything can be trained **headless and in parallel** (locally or on Runpod), and analysed with **MLflow** and **Power BI**.
+Two learning algorithms make them walk : a **neuro-evolution** (a small neural network evolved by a genetic algorithm) and a custom **PPO** (Proximal Policy Optimization) written in PyTorch. Everything can be trained **headless and in parallel** (locally or on Cloud), and analysed with **MLflow** and **Power BI**.
 
 ---
 
@@ -128,26 +128,17 @@ python replay.py outputs/models/ppo-fox_run-02_date-2026-08-02
 python replay.py outputs/models/ppo-chicken_run-01_date-2026-08-02
 ```
 
-<!-- ============================================================
-     MISSING GIFs : the four SHAPED REWARD runs (2026-08-03).
-     Those runs are already trained and committed, only the GIFs
-     are missing. Record them with the commands below, drop the
-     files in assets/, then uncomment the block.
+### 🦶 Same runs, with the shaped reward
 
-     What changed : with SHAPED_REWARD = True the animals are
-     penalised for touching the ground with anything but their
-     feet, so the fox can no longer walk on its knees and the
-     chicken can no longer drag its chest. The chicken gains the
-     most (PPO 10.7 m -> 28.22 m, GA 1573 -> 4159) because it was
-     the one cheating hardest.
+`SHAPED_REWARD = True` penalises any contact between the ground and something other than the feet, so the fox can no longer walk on its knees and the chicken can no longer drag its chest along the floor. Both learn a cleaner gait, and the trade is visible below.
 
 #### Genetic Algorithm, with shaped reward :
 
 <p align="center">
-  <img src="assets/GA-Shaped-Fox-XXm.gif" alt="GA Fox, shaped reward" width="80%">
+  <img src="assets/GA-Shaped-Fox-76m.gif" alt="GA Fox, shaped reward, 76 m" width="80%">
 </p>
 <p align="center">
-  <i>The fox walks <b>XX m</b>, now on its feet.</i>
+  <i>The fox walks <b>76 m</b>, now on its feet.</i>
 </p>
 
 ```bash
@@ -156,10 +147,10 @@ python replay.py outputs/results/neuro-ga_run-23_date-2026-08-03
 ```
 
 <p align="center">
-  <img src="assets/GA-Shaped-Chicken-XXm.gif" alt="GA Chicken, shaped reward" width="80%">
+  <img src="assets/GA-Shaped-Chicken-19m.gif" alt="GA Chicken, shaped reward, 19 m" width="80%">
 </p>
 <p align="center">
-  <i>The chicken <b>XX m</b>, no longer dragging its chest.</i>
+  <i>The chicken <b>19 m</b>, shorter than without shaping but no longer dragging its chest.</i>
 </p>
 
 ```bash
@@ -170,29 +161,30 @@ python replay.py outputs/results/neuro-ga-chicken_run-19_date-2026-08-03
 #### PPO, with shaped reward :
 
 <p align="center">
-  <img src="assets/PPO-Shaped-Fox-22m.gif" alt="PPO Fox, shaped reward" width="80%">
+  <img src="assets/PPO-Shaped-Fox-74m.gif" alt="PPO Fox, shaped reward, 74 m" width="80%">
 </p>
 <p align="center">
-  <i>The fox walks <b>22.15 m</b>, on its feet this time.</i>
+  <i>The fox walks <b>74 m</b>, more than three times its unshaped run.</i>
 </p>
 
 ```bash
 # set ANIMAL = "fox" in src/config.py, then :
-python replay.py outputs/models/ppo-fox_run-03_date-2026-08-03
+python replay.py outputs/models/ppo-fox_run-03_date-2026-08-03/last_model.pt
 ```
 
 <p align="center">
-  <img src="assets/PPO-Shaped-Chicken-28m.gif" alt="PPO Chicken, shaped reward" width="80%">
+  <img src="assets/PPO-Shaped-Chicken-93m.gif" alt="PPO Chicken, shaped reward, 93 m" width="80%">
 </p>
 <p align="center">
-  <i>The chicken <b>28.22 m</b>, and it now beats the fox.</i>
+  <i>The chicken <b>93 m</b>, the best walker of the whole project.</i>
 </p>
 
 ```bash
 # set ANIMAL = "chicken" in src/config.py, then :
-python replay.py outputs/models/ppo-chicken_run-02_date-2026-08-03
+python replay.py outputs/models/ppo-chicken_run-02_date-2026-08-03/last_model.pt
 ```
-     ============================================================ -->
+
+⚠️ Those two PPO commands point at **`last_model.pt`**, the policy as it stood at the end of training, and not at `best_model.pt`. The "best" checkpoint is the one that scored highest on the 1000 frame episodes used during training, which says nothing about holding a gait for 3000 frames. On the chicken the gap is brutal : `last_model.pt` walks 93 m where `best_model.pt` falls after 8 m.
 
 ### 📊 Training runs comparison
 
@@ -204,10 +196,10 @@ Every trained model is logged here, so any new algorithm can be compared to the 
 | **Neuro-GA** | 🐔 Chicken | 19 → 16 → 6 | 500 gen x 128 | **1573** | **41 m** | x7.8 | 5 min 48 s |
 | **PPO** | 🦊 Fox | 23 → 64 → 8 | 500 updates (2M steps) | n/a | **22.8 m** | n/a | 7 min 16 s |
 | **PPO** | 🐔 Chicken | 19 → 64 → 6 | 500 updates (2M steps) | n/a | **10.7 m** | n/a | 6 min 26 s |
-| **Neuro-GA** + shaped | 🦊 Fox | 23 → 16 → 8 | 500 gen x 128 | **6637** | to record | x16.0 | 17 min 32 s |
-| **Neuro-GA** + shaped | 🐔 Chicken | 19 → 16 → 6 | 500 gen x 128 | **4159** | to record | x29.7 | 9 min 15 s |
-| **PPO** + shaped | 🦊 Fox | 23 → 64 → 8 | 500 updates (2M steps) | n/a | **22.15 m** | n/a | 5 min 44 s |
-| **PPO** + shaped | 🐔 Chicken | 19 → 64 → 6 | 500 updates (2M steps) | n/a | **28.22 m** | n/a | 4 min 59 s |
+| **Neuro-GA** + shaped | 🦊 Fox | 23 → 16 → 8 | 500 gen x 128 | **6637** | **76 m** | x16.0 | 17 min 32 s |
+| **Neuro-GA** + shaped | 🐔 Chicken | 19 → 16 → 6 | 500 gen x 128 | **4159** | **19 m** | x29.7 | 9 min 15 s |
+| **PPO** + shaped | 🦊 Fox | 23 → 64 → 8 | 500 updates (2M steps) | n/a | **74 m** | n/a | 5 min 44 s |
+| **PPO** + shaped | 🐔 Chicken | 19 → 64 → 6 | 500 updates (2M steps) | n/a | **93 m** | n/a | 4 min 59 s |
 | **NEAT** | 🦊 Fox | to do | | | | | |
 | **SAC** | 🦊 Fox | to do | | | | | |
 
@@ -225,11 +217,15 @@ The honest conclusion for now is that **neuro-evolution reaches a good gait far 
 
 The **+ shaped** rows use `SHAPED_REWARD = True`, which penalises any contact between the ground and something other than the feet. Two things stand out :
 
-  🐔 **The chicken is transformed** : 10.7 m to **28.22 m** in PPO, 1573 to **4159** in GA. It now even beats the fox. Being a biped, it was the one cheating hardest, dragging its chest instead of walking, and forcing it onto its feet unlocked a real gait. The adaptive episode length tells the same story, it went from 971 to **1747 frames**.
+  🐔 **The chicken is transformed** : it now walks **93 m** in PPO, the longest run of the whole project, fox included. Being a biped, it was the one cheating hardest, dragging its chest instead of walking, and forcing it onto its feet unlocked a real gait. Its GA fitness follows the same trend (1573 to **4159**), and the adaptive episode length went from 971 to **1747 frames**.
 
-  🦊 **The fox barely moves** (22.79 m to 22.15 m in PPO, a 3 % gap). Its knee-walking was already about as efficient as a proper gait, so it loses almost nothing by walking cleanly.
+  🦊 **The fox gains too** : **74 m** in PPO where the unshaped policy tipped over much earlier. Walking on its feet costs it nothing in speed and buys it a lot in stability.
 
 ⚠️ The two GA fitness values are **not comparable to the rows above** : the formula itself changed, since the penalty scales the distance gain down. A drop from 8079 to 6637 does not mean the fox walks worse, only that it is now graded on a stricter scale. Only the PPO distances compare literally.
+
+⚠️ **A shaped chicken walks a cleaner gait, not a longer one.** Replayed locally it covers 19.9 m against 41.2 m without shaping. That is the trade the penalty buys : it stops the biped from dragging its chest, and dragging happened to be an efficient way to cover ground. The fitness went up because the formula now rewards walking properly, the raw distance went down.
+
+**On reproducibility** : the distances above are measured by replaying the archived champion locally, and they do not exactly match the fitness logged during training on the Runpod pod. Box2D is deterministic on a given machine (replaying the same genome twice is bit for bit identical) but not across builds, and the Linux pod does not use the same compiled `box2d-py` as a Windows box. The quadruped absorbs those tiny floating point differences and stays within 8 to 9 % of its logged fitness. The biped is chaotic and amplifies them, so its replayed distance can differ by a factor of two in either direction. Trust the replayed number for what you actually see on screen, and the logged fitness for what the algorithm optimised.
 
 ### 📝 Notes & Observations
   🦊 The quadruped fox learns to walk much faster than the chicken (standing on two legs is hard, the biped falls a lot in early generations).

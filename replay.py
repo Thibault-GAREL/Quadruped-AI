@@ -254,6 +254,14 @@ def main():
                     elif event.key == pygame.K_END:
                         go_to(len(source.champions) - 1)
 
+        # Convention de temps IDENTIQUE a l'entrainement (evaluate.py) :
+        # t = frame * DT avec frame qui demarre a 1, donc le premier pas voit
+        # t = 1/60 et non 0. Un decalage d'une seule frame sur la phase sin/cos
+        # de la politique suffit a faire diverger un bipede (la poule passe de
+        # 19,87 m a 0,42 m), le quadrupede etant assez stable pour le masquer.
+        frame += 1
+        episode_time = frame * time_step
+
         # ----- Inference + application (identique a l'entrainement) -----
         dog_state = {
             'position': (quadruped.body.body.position.x, quadruped.body.body.position.y),
@@ -266,8 +274,6 @@ def main():
 
         quadruped.update()
         physics_world.step(time_step)
-        episode_time += time_step
-        frame += 1
 
         # Boucle : rejoue en continu (reset a la chute ou apres le garde-fou).
         if quadruped.is_upside_down() or frame >= MAX_REPLAY_FRAMES:
