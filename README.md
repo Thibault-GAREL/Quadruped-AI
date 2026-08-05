@@ -15,9 +15,11 @@
 </p>
 
 ## 📝 Project Description
-This project is a playground to understand how to use **Box2D** with **Pygame**, and to teach animals how to walk from scratch. 🦊🐔
+This project is a playground to understand how to use **Box2D** with **Pygame**, and to teach animals how to walk from scratch. 🦊🐔🐈👽
 
 Each animal (a **fox** quadruped, a **chicken** biped, a **cat** with four independent legs) has real physics, muscles (joint motors), and a **fully procedural low-poly look drawn by code** (no more glued images). The body, legs, springy ears and whip-like tail are rendered directly from the Box2D bones, so adding a new animal is just a config file.
+
+The last creature, the **alien**, is not written by hand at all : its skeleton is encoded in its genes, so the same genetic algorithm evolves its **body and its brain together**. It is also the best walker of the project.
 
 Two learning algorithms make them walk : a **neuro-evolution** (a small neural network evolved by a genetic algorithm) and a custom **PPO** (Proximal Policy Optimization) written in PyTorch. Everything can be trained **headless and in parallel** (locally or on Cloud), and analysed with **MLflow** and **Power BI**.
 
@@ -32,6 +34,8 @@ Two learning algorithms make them walk : a **neuro-evolution** (a small neural n
   🐾 **Multiple animals** selectable in the config : a **fox** (quadruped), a **chicken** (biped) and a **cat** (quadruped with an articulated spine).
 
   🐈 **Four independent legs** on the cat, where the fox moves its front pair and its back pair as one, so its network drives **17 muscles** instead of 8.
+
+  👽 **Evolved skeleton** on the alien : 35 morphology genes ride at the front of the genome, so the GA chooses the number of legs (4, 6 or 8), the bone lengths and the joint limits at the same time as the network weights.
 
   🎏 **Procedural secondary animation** : spring-mounted ears and a simulated tail that whips with the motion.
 
@@ -51,15 +55,16 @@ Two learning algorithms make them walk : a **neuro-evolution** (a small neural n
 
 ## Example Outputs
 
-The three animals, all drawn **100% procedurally** from their Box2D skeleton :
+The four creatures, all drawn **100% procedurally** from their Box2D skeleton :
 
 <p align="center">
   <img src="assets/render_fox.png" alt="Procedural fox" width="80%">
   <img src="assets/render_chicken.png" alt="Procedural chicken" width="80%">
   <img src="assets/render_cat.png" alt="Procedural cat" width="80%">
+  <img src="assets/render_alien.png" alt="Procedural alien" width="80%">
 </p>
 
-The cat shot is a frame of its trained champion, caught in the **first second** of its episode.
+The cat and alien shots are frames of their trained champion, caught in the **first two seconds** of the episode. The alien body you see was **not designed**, it is the one its genes converged on : a long thin carapace on four tall legs.
 
 We can control an animal and the view (you can clearly see the parallax and the different modes, procedural / skeleton / overlay) :
 
@@ -313,6 +318,52 @@ The two algorithms land within half a metre of each other (15.8 m for PPO, 15.2 
 
 ---
 
+### 👽 Evolving the body itself
+
+Every animal above was drawn by hand : I chose how many legs it had, how long each bone was, where each joint could travel. The GA only ever tuned the brain. The **alien** removes that ceiling. Its skeleton is built from **genes**, and those genes sit at the front of the very same genome as the network weights, so **one genetic algorithm evolves the body and the brain together** (the idea comes from Karl Sims' evolved virtual creatures).
+
+  🧬 **35 morphology genes** decide the number of leg pairs (2 to 4, so **4, 6 or 8 legs**), the length and thickness of the body, the three segment lengths of each leg, their attachment point, their tilt and their joint limits.
+
+  🔒 **The genome keeps a fixed length**, which is what makes crossover meaningful. The network is sized for the **maximum** of 24 muscles, a creature with fewer simply leaves the top outputs unused, active leg pairs always come first so a muscle index never shifts, and a leg keeps its 3 segments but can atrophy one to nothing.
+
+  📐 So the network is **55 → 16 → 24** and the full genome is **1339 numbers** (35 of body, 1304 of brain), the biggest of the project.
+
+##### 👽 Alien, 109 m
+
+<p align="center">
+  <img src="assets/GA-Alien-109m.gif" alt="GA Alien, evolved skeleton, 109 m" width="80%">
+</p>
+<p align="center">
+  <i>The evolved creature covers <b>109 m</b>, the longest run of the whole project.</i>
+</p>
+
+```bash
+# set ANIMAL = "alien" in src/config.py, then :
+python replay.py outputs/results/neuro-ga-alien_run-03_date-2026-08-05
+```
+
+**Evolution threw legs away.** Random creatures come out with 4, 6 or 8 legs (about 40 %, 20 % and 40 % of them), and both runs converged on **4 legs** within 14 generations, then never reconsidered. The champion uses **12 of its 24 available muscles** and leaves the other 12 dead. Having more legs was allowed, cheap to keep, and still lost : extra legs are extra things to trip over, and extra outputs to coordinate.
+
+Those 109 m are measured over the **3000 frame replay window**, and the creature finally tips over at frame 2900. Over the 2000 frames it was actually trained on it covers **78.13 m**, which is the number in the commit that produced it.
+
+<details>
+<summary>📈 Training curves</summary>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/curves-ga-alien-dark.png">
+  <img src="assets/curves-ga-alien.png" alt="GA alien training curves" width="100%">
+</picture>
+
+The fitness reaches 95 % of its final value by generation 114, and the episode unlocks its full **2000 frames** at generation 46, sooner than any other animal of the project (52 for the shaped fox, 246 for the plain one). Evolving the body is not a handicap, it is a shortcut : instead of learning to walk with the legs it was given, the alien grows legs that suit the gait it is finding.
+
+The bottom panel is the one that matters, and it holds **two runs at once**. The pod run started from an 8 legged champion and flipped between 8 and 4 until generation 14. The run replayed here started from 6 and settled on 4 by generation 3. Two independent searches, same verdict.
+
+</details>
+
+⚠️ **The champion from the pod run does not replay here**, it falls after 6.19 m. It was trained before the spawn height was fixed, when creatures were born about 0.58 m too high and spent their first frames in free fall. A hard landing is the worst possible start for a chaotic system, two machines diverge from the first impact. The fix (`spawn_y = longest * 0.85 + 0.14`, measured on 30 random creatures) makes the birth clean, and the run above was retrained locally on the corrected code so that what you replay is exactly what was evolved. That cost 1 h 15 on my own machine against 28 min 40 s on the pod, and it is the price of an honest GIF.
+
+---
+
 ### 📊 Training runs comparison
 
 Every trained model is logged here, so any new algorithm can be compared to the previous ones on the very same task :
@@ -329,8 +380,9 @@ Every trained model is logged here, so any new algorithm can be compared to the 
 | **PPO** + shaped | 🐔 Chicken | 19 → 64 → 6 | 500 updates (2M steps) | n/a | **93 m** | n/a | 4 min 59 s |
 | **Neuro-GA** + shaped | 🐈 Cat | 41 → 16 → 17 | 500 gen x 128 | **1688** | **15.2 m** | x16.0 | 13 min 4 s |
 | **PPO** + shaped | 🐈 Cat | 41 → 64 → 17 | 500 updates (2M steps) | n/a | **15.8 m** | n/a | 8 min 7 s |
+| **Neuro-GA** + shaped + evolved body | 👽 Alien | 55 → 16 → 24 | 500 gen x 128 | **7157** | **109 m** | x28.8 | 1 h 15 (local) |
 
-The first two GA rows share the same hardware (a 32 vCPU pod), the same episode budget and the same fitness definition, which makes them directly comparable. Every **+ shaped** row ran on the same 8 vCPU pod instead, so the compute times of that block compare with each other but not with the two rows above.
+The first two GA rows share the same hardware (a 32 vCPU pod), the same episode budget and the same fitness definition, which makes them directly comparable. Every **+ shaped** row ran on the same 8 vCPU pod instead, so the compute times of that block compare with each other but not with the two rows above. The alien row is the odd one out, it was retrained on my own machine (a 16 thread laptop CPU) to make the replay exact, so its 1 h 15 compares to nothing in this table.
 
 **Gain vs gen 0** is the ratio between the final best fitness and the best fitness of the very first random generation, so it measures what the algorithm actually learned (and not how good the lucky starting population was).
 
@@ -346,13 +398,17 @@ The honest conclusion for now is that **neuro-evolution reaches a good gait far 
 
 The **+ shaped** rows use `SHAPED_REWARD = True`, which penalises any contact between the ground and something other than the feet. Two things stand out :
 
-  🐔 **The chicken is transformed** : it now walks **93 m** in PPO, the longest run of the whole project, fox included. Being a biped, it was the one cheating hardest, dragging its chest instead of walking, and forcing it onto its feet unlocked a real gait. Its GA fitness follows the same trend (1573 to **4159**), and the adaptive episode length went from 971 to **1747 frames**.
+  🐔 **The chicken is transformed** : it now walks **93 m** in PPO, the longest PPO run of the project, fox included. Being a biped, it was the one cheating hardest, dragging its chest instead of walking, and forcing it onto its feet unlocked a real gait. Its GA fitness follows the same trend (1573 to **4159**), and the adaptive episode length went from 971 to **1747 frames**.
 
   🦊 **The fox gains too** : **74 m** in PPO where the unshaped policy tipped over much earlier. Walking on its feet costs it nothing in speed and buys it a lot in stability.
 
   🐈 **The cat is a different problem entirely** : 15 m only, but with **17 muscles to coordinate** instead of 8 and four legs that can trip over each other. Both algorithms stop at the same distance, and the GA is the one that produces the honest gait here. Note that it is also a **smaller animal** (its bones are scaled to 0.82 of the fox), so a metre of ground costs it more strides.
 
 ⚠️ The shaped GA fitness values are **not comparable to the rows above** : the formula itself changed, since the penalty scales the distance gain down. A drop from 8079 to 6637 does not mean the fox walks worse, only that it is now graded on a stricter scale. Only the PPO distances compare literally.
+
+The last row plays a different game altogether :
+
+  👽 **The alien wins the project with 109 m**, and it is the only one that was allowed to choose its own body. Its fitness (7157) does live on the same scale as the shaped fox (6637) since both are shaped quadrupeds running full 2000 frame episodes, so the comparison holds for once. Designing the skeleton by hand was costing something, and evolution found it back.
 
 ⚠️ The **cat fitness compares to nothing at all**, not even to the other shaped rows. It is a different body with a different number of muscles, and above all its adaptive episode stopped growing at 1006 frames where the fox reached 2000. Comparing 1688 to 6637 would be comparing two scores earned over episodes of a different length.
 
@@ -368,6 +424,10 @@ The **+ shaped** rows use `SHAPED_REWARD = True`, which penalises any contact be
   ⏱️ That plateau is partly **mechanical** : the episode length grows with the best fitness (`base_time` + ratio to `reward_threshold_for_max_time`), so the chicken stays capped at 971 frames while the fox unlocks the full 2000. A lower threshold would give the biped more room to improve.
 
   🐈 The cat shows that **more muscles is not more talent** : its 17 actuated joints give it far more ways to move than the fox, and it walks five times less far. A bigger action space is a bigger search problem before it is an advantage.
+
+  👽 **Evolution agrees with biology on this task** : given free choice between 4, 6 and 8 legs, two independent runs both settled on **4**, and did so in under 15 generations. Legs are not free, each pair adds two more muscles to coordinate and more ways to trip.
+
+  🔍 The evolved creature also shows the limit of the setup : it keeps **12 dead outputs** out of 24, since the network is sized for the maximum number of muscles. A genome that could shrink with the body would be the natural next step.
 
   🎨 The procedural skin holds up even in extreme poses (no seams tear apart, unlike the old glued images).
 
@@ -403,6 +463,7 @@ A tiny MLP whose weights are **evolved by a genetic algorithm** (no backpropagat
 - Input = 7 base features + 2 per actuated muscle (proprioception), so **23 for the fox**, **19 for the chicken** and **41 for the cat**
 - Hidden = 16 (tanh), Output = one activation per muscle (tanh), **8 for the fox**, **6 for the chicken** and **17 for the cat**
 - Genome size follows : 520 weights for the fox, 422 for the chicken, **961 for the cat**
+- The **alien** is sized for its maximum body instead : **55 → 16 → 24**, and its genome carries 35 morphology genes in front of the 1304 weights
 - Fitness = forward distance x 100 (fall penalty), plus a stability bonus for the biped
 
 ### PPO (`IA_TYPE = "ppo"`)
@@ -429,7 +490,8 @@ A custom PyTorch **actor-critic** trained with the clipped PPO objective :
 │   │   ├── definition.py         # Dataclasses (bones, muscles, skin spec)
 │   │   ├── fox.py                # The fox (quadruped, 8 muscles)
 │   │   ├── chicken.py            # The chicken (biped, 6 muscles)
-│   │   └── cat.py                # The cat (4 independent legs + spine, 17 muscles)
+│   │   ├── cat.py                # The cat (4 independent legs + spine, 17 muscles)
+│   │   └── alien.py              # The alien (skeleton built from genes, 4 to 8 legs)
 │   │
 │   ├── core_engine/
 │   │   ├── physics.py            # Box2D world, bones, muscles, Quadruped
@@ -479,7 +541,7 @@ python main.py
 
 Pick the animal and the algorithm in `src/config.py` :
 ```python
-ANIMAL  = "fox"        # "fox" (quadruped), "chicken" (biped) or "cat" (4 independent legs)
+ANIMAL  = "fox"        # "fox", "chicken", "cat", or "alien" (evolved skeleton)
 IA_TYPE = "neuro_ga"   # "neuro_ga", "ppo" or "choreography"
 ```
 
@@ -496,6 +558,8 @@ python main.py
   🕺 `IA_TYPE = "choreography"` : train the choreography selection live in the window.
 
 ⚠️ The choreography search still hardcodes **8 muscles** (`src/models/ia_chore.py`), so it only makes sense on the fox. On the cat it would drive the two front legs and ignore the rest. The neuro-GA and PPO read the muscle count from the animal, they have no such limit.
+
+⚠️ **Do not evolve the alien from this window.** `main.py` builds one body at startup and keeps it, so every individual would be judged on the same default creature (6 legs, all genes at zero) and the morphology would never evolve. Only `train.py` rebuilds the body of each individual from its own genes, which is where the alien belongs. The window is still fine for watching one, `replay.py` rebuilds the champion's body too.
 
 ⚠️ `IA_TYPE = "ppo"` is **not** handled by `main.py` and exits with a message pointing you to the right tool. PPO trains headless with vectorized environments (`train.py --algo ppo`), and a trained policy is watched with `replay.py`. Each script has one job : `train.py` trains, `main.py` drives and trains in-window, `replay.py` watches.
 
@@ -534,6 +598,9 @@ python replay.py outputs/models/fox_ppo.pt
 # The cat, its two best runs (GA then PPO)
 python replay.py outputs/results/neuro-ga-cat_run-02_date-2026-08-03
 python replay.py outputs/models/ppo-cat_run-02_date-2026-08-03/best_model.pt
+
+# The alien, whose body is rebuilt from the champion's own genes
+python replay.py outputs/results/neuro-ga-alien_run-03_date-2026-08-05
 ```
 Given a PPO **folder**, `replay.py` picks `best_model.pt`. Point at the `.pt` yourself when you want `last_model.pt` instead (see the warning in the shaped reward section, the better of the two depends on the animal).
 
@@ -557,7 +624,11 @@ The cat was trained later and its history came back from the pod in its own file
 ```powershell
 mlflow ui --backend-store-uri sqlite:///mlflow-cat-2026-08-03.db
 ```
-It holds the experiments `quadruped-neuro-ga-cat` and `quadruped-ppo-cat`, which are the runs behind the two cat GIFs above.
+It holds the experiments `quadruped-neuro-ga-cat` and `quadruped-ppo-cat`, which are the runs behind the two cat GIFs above. The alien came back the same way :
+```powershell
+mlflow ui --backend-store-uri sqlite:///mlflow-alien-2026-08-05.db
+```
+Experiment `quadruped-neuro-ga-alien`, with both runs in it (the pod one and the local retrain).
 
 **Find the best runs** :
 1. Open experiment `quadruped-neuro-ga` (or `quadruped-ppo-fox`)
