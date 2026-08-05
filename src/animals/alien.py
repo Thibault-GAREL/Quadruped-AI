@@ -219,15 +219,23 @@ def build_alien(genes) -> AnimalDefinition:
     shape = decode(genes)
     skeleton = _build_skeleton(shape)
 
-    # Hauteur d'apparition : la patte la plus longue, plus une marge. Trop bas la
-    # creature nait dans le sol, trop haut elle passe ses premieres frames en
-    # chute libre et le debut de l'episode ne mesure plus sa demarche.
+    # Hauteur d'apparition. La somme des segments SURESTIME la portee verticale
+    # de la patte : elle est inclinee (spread) et les joints la replient, si bien
+    # qu'une patte de 1.48 ne porte le corps qu'a ~1.15. Prendre la somme telle
+    # quelle faisait naitre la creature 0.58 m trop haut en moyenne, donc en chute
+    # libre, et un atterrissage brutal est le pire depart pour un systeme chaotique
+    # (deux machines differentes divergent des le premier choc).
+    #
+    # Le facteur 0.85 avec 0.14 de marge est mesure sur 30 creatures aleatoires :
+    # 0.11 m de chute moyenne, et surtout AUCUNE creature ne nait dans le sol.
+    # Descendre a 0.80 annule la chute mais enfonce 1 creature sur 4, ce qui est
+    # pire : les forces de repulsion la catapultent des la premiere frame.
     longest = max(sum(pair['seg']) for pair in shape['pairs'])
     return AnimalDefinition(
         name='alien',
         skeleton=skeleton,
         skin=_build_skin(shape),
-        spawn_y=longest + 0.45,
+        spawn_y=longest * 0.85 + 0.14,
     )
 
 
