@@ -286,6 +286,10 @@ class IAGenetic(IABase):
             'time_period': self.time_period,
             'use_proprioception': self.policy.use_proprioception,
             'max_muscle_speed': self.policy.max_muscle_speed,
+            # Sans ce champ, le rejeu reconstruirait une politique sans genes de
+            # morphologie : elle lirait les genes du corps comme des poids et
+            # rejouerait un mouvement qui n'a jamais existe.
+            'morpho_genes': self.policy.morpho_genes,
         }
 
     def _record_champion(self, generation: int, fitness: float, genome: np.ndarray):

@@ -17,7 +17,7 @@
 ## 📝 Project Description
 This project is a playground to understand how to use **Box2D** with **Pygame**, and to teach animals how to walk from scratch. 🦊🐔
 
-Each animal (a **fox** quadruped, a **chicken** biped) has real physics, muscles (joint motors), and a **fully procedural low-poly look drawn by code** (no more glued images). The body, legs, springy ears and whip-like tail are rendered directly from the Box2D bones, so adding a new animal is just a config file.
+Each animal (a **fox** quadruped, a **chicken** biped, a **cat** with four independent legs) has real physics, muscles (joint motors), and a **fully procedural low-poly look drawn by code** (no more glued images). The body, legs, springy ears and whip-like tail are rendered directly from the Box2D bones, so adding a new animal is just a config file.
 
 Two learning algorithms make them walk : a **neuro-evolution** (a small neural network evolved by a genetic algorithm) and a custom **PPO** (Proximal Policy Optimization) written in PyTorch. Everything can be trained **headless and in parallel** (locally or on Cloud), and analysed with **MLflow** and **Power BI**.
 
@@ -29,7 +29,9 @@ Two learning algorithms make them walk : a **neuro-evolution** (a small neural n
 
   🎨 **Procedural low-poly rendering** drawn from the bones (no glued textures), with visible facets to match the scenery.
 
-  🐾 **Multiple animals** selectable in the config : a **fox** (quadruped) and a **chicken** (biped).
+  🐾 **Multiple animals** selectable in the config : a **fox** (quadruped), a **chicken** (biped) and a **cat** (quadruped with an articulated spine).
+
+  🐈 **Four independent legs** on the cat, where the fox moves its front pair and its back pair as one, so its network drives **17 muscles** instead of 8.
 
   🎏 **Procedural secondary animation** : spring-mounted ears and a simulated tail that whips with the motion.
 
@@ -49,12 +51,15 @@ Two learning algorithms make them walk : a **neuro-evolution** (a small neural n
 
 ## Example Outputs
 
-The fox and the chicken, both drawn **100% procedurally** from their Box2D skeleton :
+The three animals, all drawn **100% procedurally** from their Box2D skeleton :
 
 <p align="center">
   <img src="assets/render_fox.png" alt="Procedural fox" width="80%">
   <img src="assets/render_chicken.png" alt="Procedural chicken" width="80%">
+  <img src="assets/render_cat.png" alt="Procedural cat" width="80%">
 </p>
+
+The cat shot is a frame of its trained champion, caught in the **first second** of its episode.
 
 We can control an animal and the view (you can clearly see the parallax and the different modes, procedural / skeleton / overlay) :
 
@@ -70,7 +75,7 @@ Here is the algorithm that selects the best choreography :
 
 ### 🏆 Trained walkers (neuro-evolution)
 
-Here is the **best champion of each species**, both trained from scratch (random weights, no prior knowledge) on a **32 vCPU Runpod CPU pod** with the exact same budget : 500 generations of 128 individuals, so 64 000 episodes per run.
+Here is the **best champion of the fox and of the chicken**, both trained from scratch (random weights, no prior knowledge) on a **32 vCPU Runpod CPU pod** with the exact same budget : 500 generations of 128 individuals, so 64 000 episodes per run. The cat arrived after the shaped reward, so it lives in its own section further down.
 
 #### Genetic Algorithm :
 
@@ -168,7 +173,7 @@ python replay.py outputs/models/ppo-chicken_run-01_date-2026-08-02
 
 ### 🦶 Same runs, with the shaped reward
 
-`SHAPED_REWARD = True` penalises any contact between the ground and something other than the feet, so the fox can no longer walk on its knees and the chicken can no longer drag its chest along the floor. Both learn a cleaner gait, and the trade is visible below.
+`SHAPED_REWARD = True` penalises any contact between the ground and something other than the feet, so the fox can no longer walk on its knees and the chicken can no longer drag its chest along the floor. Both learn a cleaner gait, and the trade is visible below. The **cat** was added after this switch, so it has only ever been trained with it.
 
 #### Genetic Algorithm, with shaped reward :
 
@@ -228,6 +233,36 @@ The bottom panel holds the explanation. Forbidden from dragging its chest, the c
 
 </details>
 
+##### 🐈 Cat, 15.2 m
+
+<p align="center">
+  <img src="assets/GA-Shaped-Cat-15m.gif" alt="GA Cat, shaped reward, 15 m" width="80%">
+</p>
+<p align="center">
+  <i>The cat walks <b>15.2 m</b>, back level, with its four legs moving independently.</i>
+</p>
+
+```bash
+# set ANIMAL = "cat" in src/config.py, then :
+python replay.py outputs/results/neuro-ga-cat_run-02_date-2026-08-03
+```
+
+The cat is by far the **hardest body of the three**. Its trunk is cut in two bones joined by a spine muscle, and its four legs are driven separately, so the network controls **17 muscles** where the fox controls 8. The search space explodes (a genome of **961 weights** against 520 for the fox) and the two sides of the body can now trip over each other, which the fox simply cannot do.
+
+<details>
+<summary>📈 Training curves</summary>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/curves-ga-cat-shaped-dark.png">
+  <img src="assets/curves-ga-cat-shaped.png" alt="GA cat with shaped reward, training curves" width="100%">
+</picture>
+
+The staircase is back, but the **timing is the opposite of the fox**. The fox reached 95 % of its final fitness at generation 79 and spent the 400 remaining generations nibbling. The cat only gets there at generation **273**, and its last real climb (1525 to 1688) happens in the final handful of improving generations. Coordinating four legs takes much longer to find, and the run ends while the animal is still getting better, so this one deserves a longer budget than 500 generations.
+
+The bottom panel shows the cost of that difficulty. The cat never gets past **1006 frames**, roughly half of the fox's 2000, so it is judged on a much shorter window. Its fitness of 1688 is therefore not comparable to the fox's 6637, the two animals are not even running the same length of episode.
+
+</details>
+
 #### PPO, with shaped reward :
 
 ##### 🦊 Fox, 74 m
@@ -258,7 +293,23 @@ python replay.py outputs/models/ppo-fox_run-03_date-2026-08-03/last_model.pt
 python replay.py outputs/models/ppo-chicken_run-02_date-2026-08-03/last_model.pt
 ```
 
-⚠️ Those two PPO commands point at **`last_model.pt`**, the policy as it stood at the end of training, and not at `best_model.pt`. The "best" checkpoint is the one that scored highest on the 1000 frame episodes used during training, which says nothing about holding a gait for 3000 frames. On the chicken the gap is brutal : `last_model.pt` walks 93 m where `best_model.pt` falls after 8 m.
+##### 🐈 Cat, 15.8 m
+
+<p align="center">
+  <img src="assets/PPO-Shaped-Cat-16m.gif" alt="PPO Cat, shaped reward, 16 m" width="80%">
+</p>
+<p align="center">
+  <i>The cat covers <b>15.8 m</b> nose down and rump in the air, pushing rather than walking.</i>
+</p>
+
+```bash
+# set ANIMAL = "cat" in src/config.py, then :
+python replay.py outputs/models/ppo-cat_run-02_date-2026-08-03/best_model.pt
+```
+
+The two algorithms land within half a metre of each other (15.8 m for PPO, 15.2 m for the GA), just as they did on the fox (74 m against 76 m). **The gait is not the same at all though.** The GA cat keeps its back level and walks on its four legs, PPO found a cheaper trick and shoves itself forward nose down. The numbers say it too : its `ep_bad_contact_rate` sits at **37 %** against 23 % for the shaped fox and 26 % for the shaped chicken, so the penalty made the cheating expensive without making it impossible.
+
+⚠️ The fox and chicken commands point at **`last_model.pt`**, the cat command points at **`best_model.pt`**, and that is not a typo. The "best" checkpoint is the one that scored highest on the 1000 frame episodes used during training, which says nothing about holding a gait for 3000 frames. Which of the two wins depends entirely on the animal, so **try both** : on the chicken `last_model.pt` walks 93 m where `best_model.pt` falls after 8 m, on the cat it is the exact opposite (15.8 m against 6.8 m).
 
 ---
 
@@ -276,8 +327,12 @@ Every trained model is logged here, so any new algorithm can be compared to the 
 | **Neuro-GA** + shaped | 🐔 Chicken | 19 → 16 → 6 | 500 gen x 128 | **4159** | **19 m** | x29.7 | 9 min 15 s |
 | **PPO** + shaped | 🦊 Fox | 23 → 64 → 8 | 500 updates (2M steps) | n/a | **74 m** | n/a | 5 min 44 s |
 | **PPO** + shaped | 🐔 Chicken | 19 → 64 → 6 | 500 updates (2M steps) | n/a | **93 m** | n/a | 4 min 59 s |
+| **Neuro-GA** + shaped | 🐈 Cat | 41 → 16 → 17 | 500 gen x 128 | **1688** | **15.2 m** | x16.0 | 13 min 4 s |
+| **PPO** + shaped | 🐈 Cat | 41 → 64 → 17 | 500 updates (2M steps) | n/a | **15.8 m** | n/a | 8 min 7 s |
 
-Both GA rows share the same hardware, the same episode budget and the same fitness definition, which makes them directly comparable. **Gain vs gen 0** is the ratio between the final best fitness and the best fitness of the very first random generation, so it measures what the algorithm actually learned (and not how good the lucky starting population was).
+The first two GA rows share the same hardware (a 32 vCPU pod), the same episode budget and the same fitness definition, which makes them directly comparable. Every **+ shaped** row ran on the same 8 vCPU pod instead, so the compute times of that block compare with each other but not with the two rows above.
+
+**Gain vs gen 0** is the ratio between the final best fitness and the best fitness of the very first random generation, so it measures what the algorithm actually learned (and not how good the lucky starting population was).
 
 ⚠️ **The GA and PPO rows are not a fair fight**, and the gap has little to do with the algorithms themselves :
 
@@ -295,11 +350,15 @@ The **+ shaped** rows use `SHAPED_REWARD = True`, which penalises any contact be
 
   🦊 **The fox gains too** : **74 m** in PPO where the unshaped policy tipped over much earlier. Walking on its feet costs it nothing in speed and buys it a lot in stability.
 
-⚠️ The two GA fitness values are **not comparable to the rows above** : the formula itself changed, since the penalty scales the distance gain down. A drop from 8079 to 6637 does not mean the fox walks worse, only that it is now graded on a stricter scale. Only the PPO distances compare literally.
+  🐈 **The cat is a different problem entirely** : 15 m only, but with **17 muscles to coordinate** instead of 8 and four legs that can trip over each other. Both algorithms stop at the same distance, and the GA is the one that produces the honest gait here. Note that it is also a **smaller animal** (its bones are scaled to 0.82 of the fox), so a metre of ground costs it more strides.
+
+⚠️ The shaped GA fitness values are **not comparable to the rows above** : the formula itself changed, since the penalty scales the distance gain down. A drop from 8079 to 6637 does not mean the fox walks worse, only that it is now graded on a stricter scale. Only the PPO distances compare literally.
+
+⚠️ The **cat fitness compares to nothing at all**, not even to the other shaped rows. It is a different body with a different number of muscles, and above all its adaptive episode stopped growing at 1006 frames where the fox reached 2000. Comparing 1688 to 6637 would be comparing two scores earned over episodes of a different length.
 
 ⚠️ **A shaped chicken walks a cleaner gait, not a longer one.** Replayed locally it covers 19.9 m against 41.2 m without shaping. That is the trade the penalty buys : it stops the biped from dragging its chest, and dragging happened to be an efficient way to cover ground. The fitness went up because the formula now rewards walking properly, the raw distance went down.
 
-**On reproducibility** : the distances above are measured by replaying the archived champion locally, and they do not exactly match the fitness logged during training on the Runpod pod. Box2D is deterministic on a given machine (replaying the same genome twice is bit for bit identical) but not across builds, and the Linux pod does not use the same compiled `box2d-py` as a Windows box. The quadruped absorbs those tiny floating point differences and stays within 8 to 9 % of its logged fitness. The biped is chaotic and amplifies them, so its replayed distance can differ by a factor of two in either direction. Trust the replayed number for what you actually see on screen, and the logged fitness for what the algorithm optimised.
+**On reproducibility** : the distances above are measured by replaying the archived champion locally, and they do not exactly match the fitness logged during training on the Runpod pod. Box2D is deterministic on a given machine (replaying the same genome twice is bit for bit identical) but not across builds, and the Linux pod does not use the same compiled `box2d-py` as a Windows box. The quadrupeds absorb those tiny floating point differences and stay within 8 to 10 % of their logged fitness (the fox and the cat both do). The biped is chaotic and amplifies them, so its replayed distance can differ by a factor of two in either direction. Trust the replayed number for what you actually see on screen, and the logged fitness for what the algorithm optimised.
 
 ### 📝 Notes & Observations
   🦊 The quadruped fox learns to walk much faster than the chicken (standing on two legs is hard, the biped falls a lot in early generations).
@@ -307,6 +366,8 @@ The **+ shaped** rows use `SHAPED_REWARD = True`, which penalises any contact be
   🐔 The chicken **plateaus early** : its best fitness (1573) is reached at generation 119 and never improves during the 381 remaining generations, while the fox keeps progressing until generation 420.
 
   ⏱️ That plateau is partly **mechanical** : the episode length grows with the best fitness (`base_time` + ratio to `reward_threshold_for_max_time`), so the chicken stays capped at 971 frames while the fox unlocks the full 2000. A lower threshold would give the biped more room to improve.
+
+  🐈 The cat shows that **more muscles is not more talent** : its 17 actuated joints give it far more ways to move than the fox, and it walks five times less far. A bigger action space is a bigger search problem before it is an advantage.
 
   🎨 The procedural skin holds up even in extreme poses (no seams tear apart, unlike the old glued images).
 
@@ -339,8 +400,9 @@ A tiny MLP whose weights are **evolved by a genetic algorithm** (no backpropagat
 ![Neuro-GA architecture](assets/architecture_neuro_ga.svg)
 
 **Key details :**
-- Input = 7 base features + 2 per actuated muscle (proprioception), so **23 for the fox** and **19 for the chicken**
-- Hidden = 16 (tanh), Output = one activation per muscle (tanh), **8 for the fox** and **6 for the chicken**
+- Input = 7 base features + 2 per actuated muscle (proprioception), so **23 for the fox**, **19 for the chicken** and **41 for the cat**
+- Hidden = 16 (tanh), Output = one activation per muscle (tanh), **8 for the fox**, **6 for the chicken** and **17 for the cat**
+- Genome size follows : 520 weights for the fox, 422 for the chicken, **961 for the cat**
 - Fitness = forward distance x 100 (fall penalty), plus a stability bonus for the biped
 
 ### PPO (`IA_TYPE = "ppo"`)
@@ -365,8 +427,9 @@ A custom PyTorch **actor-critic** trained with the clipped PPO objective :
 │   │
 │   ├── animals/                  # One file per animal (skeleton + procedural skin)
 │   │   ├── definition.py         # Dataclasses (bones, muscles, skin spec)
-│   │   ├── fox.py                # The fox (quadruped)
-│   │   └── chicken.py            # The chicken (biped)
+│   │   ├── fox.py                # The fox (quadruped, 8 muscles)
+│   │   ├── chicken.py            # The chicken (biped, 6 muscles)
+│   │   └── cat.py                # The cat (4 independent legs + spine, 17 muscles)
 │   │
 │   ├── core_engine/
 │   │   ├── physics.py            # Box2D world, bones, muscles, Quadruped
@@ -416,7 +479,7 @@ python main.py
 
 Pick the animal and the algorithm in `src/config.py` :
 ```python
-ANIMAL  = "fox"        # "fox" (quadruped) or "chicken" (biped)
+ANIMAL  = "fox"        # "fox" (quadruped), "chicken" (biped) or "cat" (4 independent legs)
 IA_TYPE = "neuro_ga"   # "neuro_ga", "ppo" or "choreography"
 ```
 
@@ -431,6 +494,8 @@ python main.py
   🤖 `HUMAN_CONTROL = False` + `IA_TYPE = "neuro_ga"` : train the genetic algorithm live in the window.
 
   🕺 `IA_TYPE = "choreography"` : train the choreography selection live in the window.
+
+⚠️ The choreography search still hardcodes **8 muscles** (`src/models/ia_chore.py`), so it only makes sense on the fox. On the cat it would drive the two front legs and ignore the rest. The neuro-GA and PPO read the muscle count from the animal, they have no such limit.
 
 ⚠️ `IA_TYPE = "ppo"` is **not** handled by `main.py` and exits with a message pointing you to the right tool. PPO trains headless with vectorized environments (`train.py --algo ppo`), and a trained policy is watched with `replay.py`. Each script has one job : `train.py` trains, `main.py` drives and trains in-window, `replay.py` watches.
 
@@ -465,7 +530,13 @@ python replay.py outputs/results/neuro-ga_run-22_date-2026-07-31
 # PPO : a single trained policy, either its run folder or the .pt directly
 python replay.py outputs/models/ppo-fox_run-02_date-2026-08-02
 python replay.py outputs/models/fox_ppo.pt
+
+# The cat, its two best runs (GA then PPO)
+python replay.py outputs/results/neuro-ga-cat_run-02_date-2026-08-03
+python replay.py outputs/models/ppo-cat_run-02_date-2026-08-03/best_model.pt
 ```
+Given a PPO **folder**, `replay.py` picks `best_model.pt`. Point at the `.pt` yourself when you want `last_model.pt` instead (see the warning in the shaped reward section, the better of the two depends on the animal).
+
 Keys : `SPACE` replay from start, `F1` camera follow, `ESC` quit. With the GA you also get `→ / ←` next and previous generation, `↑` jump to the best champion, `HOME / END` first and last generation. PPO has a single final policy, so it has no generation to browse.
 
 Set `ANIMAL` in `src/config.py` to match the animal you trained. If it does not match, `replay.py` tells you which value to use instead of failing on a dimension mismatch.
@@ -481,6 +552,12 @@ Launch the UI (from the project root, with a venv that has mlflow):
 mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 Open http://localhost:5000 in your browser.
+
+The cat was trained later and its history came back from the pod in its own file, so it needs a second command :
+```powershell
+mlflow ui --backend-store-uri sqlite:///mlflow-cat-2026-08-03.db
+```
+It holds the experiments `quadruped-neuro-ga-cat` and `quadruped-ppo-cat`, which are the runs behind the two cat GIFs above.
 
 **Find the best runs** :
 1. Open experiment `quadruped-neuro-ga` (or `quadruped-ppo-fox`)

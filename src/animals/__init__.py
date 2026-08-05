@@ -17,6 +17,13 @@ def get_animal(name: str):
     if key in ('cat', 'chat'):
         from src.animals.cat import CAT
         return CAT
+    if key in ('alien', 'insect', 'insecte'):
+        # Squelette EVOLUTIF : celui-ci est la creature par defaut (genes nuls).
+        # Pendant l'entrainement, chaque individu reconstruit le sien depuis ses
+        # propres genes (voir evaluate.run_episode).
+        from src.animals.alien import ALIEN
+        return ALIEN
     raise ValueError(
-        f"Animal inconnu : {name!r}. Valeurs supportees : 'fox', 'chicken', 'cat'."
+        f"Animal inconnu : {name!r}. "
+        "Valeurs supportees : 'fox', 'chicken', 'cat', 'alien'."
     )

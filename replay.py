@@ -74,9 +74,23 @@ class ChampionsSource:
 
     def describe(self) -> str:
         p = self.policy
+        extra = f" | {p.morpho_genes} genes de morphologie" if p.morpho_genes else ""
         return (f"🧬 {len(self.champions)} champions | reseau "
                 f"{p.input_size}->{p.hidden_size}->{p.output_size} "
-                f"(proprio={p.use_proprioception})")
+                f"(proprio={p.use_proprioception}){extra}")
+
+    def definition(self):
+        """Corps du champion courant, ou None si le squelette est fige.
+
+        Indispensable pour un animal EVOLUTIF : son corps est encode dans son
+        propre genome, donc rejouer son cerveau sur la creature par defaut
+        montrerait n'importe quoi (le bon controleur sur le mauvais squelette).
+        """
+        if not self.policy.morpho_genes:
+            return None
+        from src.animals.alien import build_alien
+        morpho, _ = self.policy.split_genome(self.champions[self.current]["genome"])
+        return build_alien(morpho)
 
     def act(self, episode_time: float, dog_state: dict, quadruped):
         genome = self.champions[self.current]["genome"]
@@ -152,6 +166,10 @@ class PpoSource:
     def keys_help(self) -> str:
         return "ESPACE : rejouer | F1 : camera | ESC : quitter"
 
+    def definition(self):
+        """PPO n'evolue pas la morphologie : le squelette reste celui de ANIMAL."""
+        return None
+
 
 # ============ RESOLUTION DU CHEMIN ============
 
@@ -207,8 +225,16 @@ def main():
     display.follow_mode = True
 
     def reset_world():
+        # Un animal EVOLUTIF change de corps d'un champion a l'autre : on relit
+        # donc la definition a chaque reset, et l'overlay est reconstruit avec,
+        # sinon la peau resterait celle de la creature precedente.
+        nonlocal overlay
+        current = source.definition() or animal
+        if current is not animal:
+            overlay = VisualOverlay(display, parts_folder="assets",
+                                    global_scale=0.3, definition=current)
         world = PhysicsWorld(gravity=(0, -10))
-        quad = Quadruped(world, x=6, y=animal.spawn_y, definition=animal)
+        quad = Quadruped(world, x=6, y=current.spawn_y, definition=current)
         return world, quad, quad.body.body.position.x
 
     physics_world, quadruped, start_x = reset_world()

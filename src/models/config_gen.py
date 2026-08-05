@@ -20,6 +20,18 @@ from src.animals import get_animal
 # L'animal selectionne determine la taille de sortie du reseau (nombre de
 # muscles actionnes) et les chemins de sauvegarde (un checkpoint par animal).
 _ANIMAL_DEF = get_animal(ANIMAL)
+
+# Animal a squelette EVOLUTIF : le reseau doit alors etre dimensionne pour le
+# MAXIMUM de muscles possible, pas pour ceux de la creature par defaut, et le
+# genome porte en tete les genes de morphologie. Une creature qui a moins de
+# muscles laisse simplement les dernieres sorties inutilisees.
+_EVOLVABLE = ANIMAL.strip().lower() in ('alien', 'insect', 'insecte')
+if _EVOLVABLE:
+    from src.animals.alien import MAX_MUSCLES as _MAX_MUSCLES
+    from src.animals.alien import MORPHO_GENES as _MORPHO_GENES
+else:
+    _MAX_MUSCLES = _ANIMAL_DEF.num_actuated
+    _MORPHO_GENES = 0
 # Suffixe vide pour le renard : conserve les noms de runs et checkpoints
 # historiques (neuro-ga_run-NN, fox_ai_neuro.pkl).
 _SUFFIX = "" if ANIMAL == "fox" else f"-{ANIMAL}"
@@ -44,7 +56,9 @@ class NeuroGASettings(BaseSettings):
     # INPUT_SIZE + 2 * OUTPUT_SIZE. Ne pas coder cette taille en dur ailleurs.
     INPUT_SIZE: int = 7
     HIDDEN_SIZE: int = 16
-    OUTPUT_SIZE: int = _ANIMAL_DEF.num_actuated  # 8 pour le renard ET la poule
+    OUTPUT_SIZE: int = _MAX_MUSCLES  # muscles de l'animal, ou MAXIMUM si evolutif
+    # Genes de morphologie en tete du genome (0 si le squelette est fige).
+    MORPHO_GENES: int = _MORPHO_GENES
     USE_PROPRIOCEPTION: bool = True  # Injecte les angles/vitesses des joints
     MAX_MUSCLE_SPEED: float = Field(3.0, gt=0.0)  # Pour normaliser les vitesses
     ACTION_THRESHOLD: float = Field(0.33, ge=0.0, le=1.0)  # conserve (compat), inutilise en continu
@@ -132,6 +146,7 @@ NN_CONFIG = {
     'max_muscle_speed': SETTINGS.MAX_MUSCLE_SPEED,
     'action_threshold': SETTINGS.ACTION_THRESHOLD,
     'time_period': SETTINGS.TIME_PERIOD,
+    'morpho_genes': SETTINGS.MORPHO_GENES,
 }
 
 GA_CONFIG = {

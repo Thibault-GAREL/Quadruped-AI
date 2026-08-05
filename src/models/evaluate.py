@@ -50,9 +50,19 @@ def run_episode(definition, policy, genome, max_frames: int,
         stagnation_min_progress: progres minimal (m) pour reinitialiser le compteur
         track_ground_contacts: compter les frames en appui fautif
     """
+    genome = np.asarray(genome, dtype=np.float32)
+
+    # Squelette EVOLUTIF : quand la politique reserve des genes de morphologie,
+    # la definition recue n'est qu'un gabarit par defaut. Chaque individu se
+    # reconstruit un corps depuis SES genes, si bien que le GA fait evoluer le
+    # corps et le cerveau dans le meme genome.
+    morpho, _ = policy.split_genome(genome)
+    if morpho is not None:
+        from src.animals.alien import build_alien
+        definition = build_alien(morpho)
+
     world = PhysicsWorld(gravity=(0, -10))
     quad = Quadruped(world, x=SPAWN_X, y=definition.spawn_y, definition=definition)
-    genome = np.asarray(genome, dtype=np.float32)
 
     start_x = quad.body.body.position.x
     best_x = start_x

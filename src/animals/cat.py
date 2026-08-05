@@ -1,13 +1,16 @@
 # ============================================
 # cat.py - Le chat (quadrupede au dos articule)
 # ============================================
-# Meme topologie de pattes que le renard, mais le tronc est coupe en DEUX os
-# relies par un muscle de colonne vertebrale. C'est ce qui distingue un chat
-# d'un renard en course : il plie et deplie le dos pour allonger sa foulee.
+# Deux differences avec le renard : le tronc est coupe en DEUX os relies par un
+# muscle de colonne vertebrale (c'est ce qui distingue un chat d'un renard en
+# course, il plie et deplie le dos pour allonger sa foulee), et les QUATRE
+# pattes sont pilotees separement la ou le renard bouge sa paire avant et sa
+# paire arriere d'un bloc.
 #
 # Consequences a connaitre :
-# - 9 muscles actionnes au lieu de 8, donc un reseau 25 -> 16 -> 9. Le chat
-#   n'est PAS directement comparable au renard, qui a un tronc rigide.
+# - 17 muscles actionnes au lieu de 8 (4 pattes x 4 muscles, plus la colonne),
+#   donc un reseau 41 -> 16 -> 17 et un genome de 961 poids contre 520 pour le
+#   renard. Le chat n'est PAS directement comparable au renard.
 # - `body_shapes` ne suit que l'os racine, la croupe est donc peinte via
 #   `extra_shapes` (voir SkinSpec dans definition.py).
 #

@@ -7,7 +7,7 @@
 # Chaque animal est défini dans src/animals/ (squelette + peau procédurale).
 # Pour en ajouter un : créer le module puis l'enregistrer dans
 # src/animals/__init__.py (get_animal).
-ANIMAL = "cat"  # "fox" (renard, quadrupède) ou "chicken" (poule, bipède) ou "cat" (chat, quadrupède)
+ANIMAL = "alien"  # "fox" (renard, quadrupède) ou "chicken" (poule, bipède) ou "cat" (chat, quadrupède) ou "alien" (topologie random et sélectionné)
 
 # Mode de contrôle
 HUMAN_CONTROL = True  # True = contrôle humain, False = contrôle IA
