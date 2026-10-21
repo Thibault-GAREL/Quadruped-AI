@@ -11,7 +11,7 @@
 ![Contributions](https://img.shields.io/badge/contributions-welcome-orange.svg)
 
 <p align="center">
-  <img src="assets/logo.png" alt="logo">
+  <img src="assets/logo-GA-Fox-6s.gif" alt="Animated logo, the GA fox runs out of the logo gear">
 </p>
 
 ## 📝 Project Description
