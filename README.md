@@ -25,34 +25,6 @@ Two learning algorithms make them walk : a **neuro-evolution** (a small neural n
 
 ---
 
-## ⚙️ Features
-
-  🦴 Real physics with muscles, interaction with the **box2D** library.
-
-  🎨 **Procedural low-poly rendering** drawn from the bones (no glued textures), with visible facets to match the scenery.
-
-  🐾 **Multiple animals** selectable in the config : a **fox** (quadruped), a **chicken** (biped) and a **cat** (quadruped with an articulated spine).
-
-  🐈 **Four independent legs** on the cat, where the fox moves its front pair and its back pair as one, so its network drives **17 muscles** instead of 8.
-
-  👽 **Evolved skeleton** on the alien : 35 morphology genes ride at the front of the genome, so the GA chooses the number of legs (4, 6 or 8), the bone lengths and the joint limits at the same time as the network weights.
-
-  🎏 **Procedural secondary animation** : spring-mounted ears and a simulated tail that whips with the motion.
-
-  🧬 **Neuro-evolution** (genetic algorithm on the weights of an MLP, reactive closed-loop policy).
-
-  🤖 **PPO** (custom PyTorch actor-critic, vectorized Box2D environments).
-
-  ⚡ **Parallel headless training** on all CPU cores (`train.py`), with early stop of stagnant episodes.
-
-  📊 **MLflow** experiment tracking + Power BI data analysis.
-
-  🕺 An algorithm to select the best **choreography** (open loop).
-
-  🦶 **Shaped reward** that penalises any ground contact outside the feet, so the animals walk instead of crawling.
-
----
-
 ## Example Outputs
 
 The four creatures, all drawn **100% procedurally** from their Box2D skeleton :
@@ -433,25 +405,7 @@ The last row plays a different game altogether :
 
 ---
 
-## ⚙️ How it works
-
-  🎮 The animal lives in a **Box2D** world (bones + joint motors) rendered with **Pygame**.
-
-  🧠 An IA reads the animal state (body position, velocity, angle, plus the angle and speed of each joint : proprioception) and outputs one continuous activation per muscle.
-
-  🧬 The **neuro-GA** evolves a population of small networks : the best walkers reproduce (elitism, tournament selection, crossover, mutation).
-
-  🤖 **PPO** instead uses gradients : it collects transitions from many parallel worlds and improves the policy with the clipped PPO objective and GAE.
-
-  🎯 The reward (and the GA fitness) is simply the forward distance travelled, with a penalty when the animal falls.
-
-  ⚡ For real training, `train.py` runs everything **without any window**, in parallel, which is roughly 250x faster than the on-screen loop.
-
-  🕹️ `main.py` is then used to **watch** a trained policy walk, with the parallax scenery.
-
----
-
-## 🗺️ Architecture Diagram
+## 🗺️ How it works
 
 ### Neuro-evolution (default, `IA_TYPE = "neuro_ga"`)
 
@@ -476,6 +430,32 @@ A custom PyTorch **actor-critic** trained with the clipped PPO objective :
 - γ (gamma) = 0.99, λ (lambda) = 0.95, clip_range = 0.2
 - 16 vectorized Box2D envs x 256 steps per update
 - Adam lr = 3e-4, entropy coef = 0.003, observation normalization
+
+<details>
+<summary>⚙️ <b>Features and step by step</b></summary>
+
+- Real physics with muscles, interaction with the **box2D** library.
+- **Procedural low-poly rendering** drawn from the bones (no glued textures), with visible facets to match the scenery.
+- **Multiple animals** selectable in the config : a **fox** (quadruped), a **chicken** (biped) and a **cat** (quadruped with an articulated spine).
+- **Four independent legs** on the cat, where the fox moves its front pair and its back pair as one, so its network drives **17 muscles** instead of 8.
+- **Evolved skeleton** on the alien : 35 morphology genes ride at the front of the genome, so the GA chooses the number of legs (4, 6 or 8), the bone lengths and the joint limits at the same time as the network weights.
+- **Procedural secondary animation** : spring-mounted ears and a simulated tail that whips with the motion.
+- **Neuro-evolution** (genetic algorithm on the weights of an MLP, reactive closed-loop policy).
+- **PPO** (custom PyTorch actor-critic, vectorized Box2D environments).
+- **Parallel headless training** on all CPU cores (`train.py`), with early stop of stagnant episodes.
+- **MLflow** experiment tracking + Power BI data analysis.
+- An algorithm to select the best **choreography** (open loop).
+- **Shaped reward** that penalises any ground contact outside the feet, so the animals walk instead of crawling.
+
+- The animal lives in a **Box2D** world (bones + joint motors) rendered with **Pygame**.
+- An IA reads the animal state (body position, velocity, angle, plus the angle and speed of each joint : proprioception) and outputs one continuous activation per muscle.
+- The **neuro-GA** evolves a population of small networks : the best walkers reproduce (elitism, tournament selection, crossover, mutation).
+- **PPO** instead uses gradients : it collects transitions from many parallel worlds and improves the policy with the clipped PPO objective and GAE.
+- The reward (and the GA fitness) is simply the forward distance travelled, with a penalty when the animal falls.
+- For real training, `train.py` runs everything **without any window**, in parallel, which is roughly 250x faster than the on-screen loop.
+- `main.py` is then used to **watch** a trained policy walk, with the parallax scenery.
+
+</details>
 
 ---
 
